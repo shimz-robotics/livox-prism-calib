@@ -77,7 +77,7 @@ data/input_data/
 | -33.1169 | -13.5946 | -1.4024 |
 
 
-### hapNUM.csv の形式
+### hap<NUM>.csv の形式
 
 `lidar_to_csv.py` で出力する形式（ヘッダなし、5列）:
 
@@ -239,7 +239,7 @@ sudo apt install ros-humble-sensor-msgs-py
 
 - 点群中の少なくとも３点にターゲットプリズムを設置する
 - トータルステーションで設置したターゲットプリズムの位置を測定する
-- 測定した値を X,Y,Z の順で HAPxxx.csv に記述する
+- 測定した値を X,Y,Z の順で prism_pos_xxx.csv に記述する
 
 ### キャリブレーションの実行
 
@@ -440,6 +440,10 @@ python3 show_multi_hap_point_cloud.py --hap-num1 101 --hap-num2 102 --data-folde
 `data/HAP_config.json` の `lidar_configs[].extrinsic_parameter` に書き込み、  
 ワークスペースのドライバ config（src 側・install 側）へ配備（コピー）します。
 
+あわせて `host_net_info` の IP（LiDAR が点群を送り返す先＝この PC の IP）を、  
+対象 LiDAR への経路から自動検出した自機 IP に書き換えます（通常更新・`--reset` 共通のデフォルト動作）。  
+PC やネットワーク構成が変わっても、本スクリプトの実行だけでホスト IP が追従します。
+
 可視化で結果を確認したあと、別スクリプトで反映してください。
 
 ### スクリプト
@@ -567,6 +571,7 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 ### 注意
 
 - 現場設定の真実（マスター）は本リポジトリの `data/HAP_config.json` です。IP 構成の変更やキャリブ結果はまずマスターに反映し、ドライバへは本スクリプトで配備します。ドライバ側 config を直接編集しても、次回の配備で上書きされます
+- `host_net_info` の IP が実 IP と異なるままだと、ドライバは「bind failed」で起動に失敗します。自機 IP を検出できない場合（LiDAR への経路がない、LiDAR 用 NIC 未接続など）は警告を表示し、`host_net_info` は既存値のまま配備されるので、警告が出たら LAN ケーブルと IP 設定を確認してください
 - 更新・配備前に各ファイルの `.bak` が作成されます（`--no-backup` 指定時を除く）
 - ドライバが実行時に読むのは install 側（`<WS>/install/livox_ros_driver2/share/livox_ros_driver2/config/HAP_config.json`）の実体コピーです。スクリプトは src 側・install 側の両方へ配備します
 - install 側まで配備された場合、**livox_ros_driver2 の再起動**後に点群へ反映されます
@@ -626,79 +631,66 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 
 - 点群中の少なくとも３点にターゲットプリズムを設置する
 - トータルステーションで設置したターゲットプリズムの位置を測定する
-- 測定した値を X,Y,Z の順で HAPxxx.csv に記述する
+- 測定した値を X,Y,Z の順で prism_pos_xxx.csv に記述する
 
-## JSONファイルのリセット
+以下は、このプロジェクトのパスに移動して実行する。
 
 ```bash
 cd /path/to/livox-prism-calib
 ```
 
-```bash
-python3 update_hap_config_from_coorsys.py --reset -n 123
-```
+## JSONファイルのリセット
+
+101と102を初期化したい場合
 
 ```bash
-python3 update_hap_config_from_coorsys.py --reset -n 124
+python3 update_hap_config_from_coorsys.py --reset -n 101 102
 ```
 
 ## LiDARドライバ起動
 
 ```bash
-cd /path/to/livox-prism-calib
-```
-
-```bash
 source /opt/ros/humble/setup.bash
-```
-
-```bash
 source ./ros2_livox_ws/install/setup.bash
-```
-
-```bash
 ros2 launch livox_ros_driver2 rviz_HAP_launch.py
 ```
 
 ## 点群データ取得
 
 ```bash
-cd /path/to/livox-prism-calib
+python3 lidar_to_csv.py --hap-num 101 --duration 10
 ```
 
 ```bash
-python3 lidar_to_csv.py --hap-num 123 --duration 10
-```
-
-```bash
-python3 lidar_to_csv.py --hap-num 124 --duration 10
+python3 lidar_to_csv.py --hap-num 102 --duration 10
 ```
 
 ## キャリブレーションの実行
 
 ```bash
-python3 detect_prism_and_calc_hap_coorsys.py -n 123 -d ./data
+python3 detect_prism_and_calc_hap_coorsys.py -n 101
 ```
 
 ```bash
-python3 detect_prism_and_calc_hap_coorsys.py -n 124 -d ./data
+python3 detect_prism_and_calc_hap_coorsys.py -n 102
 ```
 
 ## 点群可視化(確認)
 
 ```bash
-python3 show_multi_hap_point_cloud.py --hap-num1 123 --hap-num2 124 --data-folder ./data
+python3 show_multi_hap_point_cloud.py --hap-num1 101 --hap-num2 102
 ```
 
 ## HAP_config.json への反映
 
 ```bash
-python3 update_hap_config_from_coorsys.py -n 123 124 -d ./data
+python3 update_hap_config_from_coorsys.py -n 101 102
 ```
 
 ## 確認
 
+反映にはドライバの再起動が必要です。起動中のドライバを Ctrl+C で停止してから再度起動します。
+
 ```bash
 ros2 launch livox_ros_driver2 rviz_HAP_launch.py
 ```
-
