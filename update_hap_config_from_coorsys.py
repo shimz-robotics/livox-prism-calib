@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -32,7 +33,23 @@ import yaml
 from hap_ip_map import DEFAULT_IP_MAP_PATH, load_hap_num_to_ip
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-DEFAULT_HAP_CONFIG_PATH = Path.home() / "ros2_livox_ws/src/livox_ros_driver2/config/HAP_config.json"
+
+
+def _default_ws_dir() -> Path:
+    """ROS 2 ワークスペースの場所を解決する。
+
+    優先順: 環境変数 LIVOX_WS → リポジトリ内 ros2_livox_ws → ~/ros2_livox_ws
+    """
+    env = os.environ.get("LIVOX_WS")
+    if env:
+        return Path(env).expanduser()
+    local_ws = SCRIPT_DIR / "ros2_livox_ws"
+    if local_ws.is_dir():
+        return local_ws
+    return Path.home() / "ros2_livox_ws"
+
+
+DEFAULT_HAP_CONFIG_PATH = _default_ws_dir() / "src/livox_ros_driver2/config/HAP_config.json"
 DEFAULT_DATA_FOLDER = SCRIPT_DIR / "data"
 DEFAULT_HAP_NUMS = (101, 102)
 

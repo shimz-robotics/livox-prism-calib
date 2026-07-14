@@ -101,7 +101,7 @@ ROS 2 上の Livox HAP 点群を CSV に記録します。
 
 #### 前提
 
-- `ros2_livox_ws` で `livox_ros_driver2` をビルド済みであること
+- `livox_ros_driver2` のワークスペースをビルド済みであること（場所はリポジトリ内 `ros2_livox_ws/` または `~/ros2_livox_ws`。以下の例は `~/ros2_livox_ws` の場合）
 - `HAP_config.json` の IP 設定が実機と一致していること
 - `rviz_HAP_launch.py` で `multi_topic=1`（LiDAR ごとにトピックが分かれる設定）
 
@@ -520,7 +520,7 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 | -------------------- | ---------- | ------------------------------------------------- | --------------------------------------- |
 | `--hap-num N ...`    | `-n N ...` | `101 102`                                         | 対象 HAP 番号（複数指定可）                        |
 | `--data-folder PATH` | `-d PATH`  | `./data`（リポジトリ内） | キャリブ YAML の親フォルダ（`--reset` 時は未使用）       |
-| `--hap-config PATH`  |            | `~/ros2_livox_ws/.../HAP_config.json`             | 更新先 Livox 設定 JSON                       |
+| `--hap-config PATH`  |            | `<WS>/src/livox_ros_driver2/config/HAP_config.json`（`<WS>` は `LIVOX_WS` → `./ros2_livox_ws` → `~/ros2_livox_ws` の順で解決） | 更新先 Livox 設定 JSON                       |
 | `--ip-map PATH`      |            | `data/input_data/hap_ip_map.yaml`                    | HAP番号→IP マップ YAML                        |
 | `--reset`            |            | （オフ）                                              | 指定 HAP の `extrinsic_parameter` をゼロにリセット |
 | `--yes`              | `-y`       | （オフ）                                              | 確認プロンプトをスキップして更新                        |
@@ -572,7 +572,7 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 | `update_hap_config_from_coorsys.py`        | キャリブ YAML → HAP_config.json 反映               |
 | `data/`                                    | 点群 CSV（`input_data`）・キャリブ結果（`output_data`）     |
 | `matlab_ws/LivoxCalibByPrisms/`（別リポジトリ） | 元の MATLAB 実装（参考）                             |
-| `~/ros2_livox_ws/.../HAP_config.json`      | 反映先 Livox ドライバ設定（別ワークスペース）                  |
+| `<WS>/src/livox_ros_driver2/config/HAP_config.json` | 反映先 Livox ドライバ設定（`<WS>` はワークスペースの場所）          |
 
 
 # 大まかな手順

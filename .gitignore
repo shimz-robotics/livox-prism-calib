@@ -8,3 +8,6 @@ __pycache__/
 
 # Point cloud CSVs are large; keep locally, do not commit
 data/input_data/hap*.csv
+
+# ROS 2 workspace (built locally, see issue #3/#5)
+/ros2_livox_ws/
