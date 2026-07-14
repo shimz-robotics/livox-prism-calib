@@ -3,7 +3,7 @@
 update_hap_config_from_coorsys.py
 
 hap<N>_coorsys_py.yaml の位置・姿勢を、本リポジトリ管理のマスター
-data/input_data/HAP_config.json の extrinsic_parameter に反映し、
+data/HAP_config.json の extrinsic_parameter に反映し、
 ドライバのワークスペース config（src 側・install 側）へ配備コピーする。
 
 使い方:
@@ -12,7 +12,7 @@ data/input_data/HAP_config.json の extrinsic_parameter に反映し、
 オプション:
   --hap-num N ...     対象 HAP 番号（複数指定可、デフォルト: 101 102）
   --data-folder PATH  キャリブ YAML の親フォルダ（output_data を含む）
-  --master PATH       マスター HAP_config.json（デフォルト: data/input_data/HAP_config.json）
+  --master PATH       マスター HAP_config.json（デフォルト: data/HAP_config.json）
   --hap-config PATH   配備先ドライバ config（src 側。install 側は自動導出）
   --no-deploy         マスターのみ更新し、ドライバ config へ配備しない
   --ip-map PATH       HAP番号→IP マップ YAML（デフォルト: data/input_data/hap_ip_map.yaml）
@@ -54,7 +54,7 @@ def _default_ws_dir() -> Path:
 
 
 DEFAULT_HAP_CONFIG_PATH = _default_ws_dir() / "src/livox_ros_driver2/config/HAP_config.json"
-DEFAULT_MASTER_CONFIG_PATH = SCRIPT_DIR / "data/input_data/HAP_config.json"
+DEFAULT_MASTER_CONFIG_PATH = SCRIPT_DIR / "data/HAP_config.json"
 
 
 def derive_install_config_path(config_path: Union[str, Path]) -> Optional[Path]:
