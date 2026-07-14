@@ -6,6 +6,10 @@ hap<N>_coorsys_py.yaml の位置・姿勢を、本リポジトリ管理のマス
 data/HAP_config.json の extrinsic_parameter に反映し、
 ドライバのワークスペース config（src 側・install 側）へ配備コピーする。
 
+あわせて host_net_info の IP（LiDAR が点群を送り返す先＝この PC の IP）を、
+対象 LiDAR への経路から自動検出した自機 IP にデフォルトで書き換える。
+検出できない場合（LiDAR 用 NIC 未接続など）は警告を表示し、既存値のまま配備する。
+
 使い方:
   python3 update_hap_config_from_coorsys.py [--hap-num N ...] [--data-folder PATH]
 
@@ -28,6 +32,7 @@ import argparse
 import json
 import os
 import shutil
+import socket
 import sys
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Sequence, Union
@@ -114,6 +119,94 @@ def check_ip_map_consistency(
             f"HAP_config.json にあるが hap_ip_map.yaml にない IP: {only_in_config}"
         )
     return warnings
+
+
+def detect_host_ip(lidar_ips: Iterable[str]) -> str:
+    """対象 LiDAR への経路で使われる自機 IP を検出する。
+
+    UDP ソケットの connect はパケットを送信せず OS の経路選択だけを行うため、
+    LiDAR が未起動でも検出できる。以下の場合は ValueError:
+    - LiDAR への経路がない
+    - LiDAR ごとに検出結果が一致しない
+    - 検出 IP が LiDAR と同一 /24 にない（LiDAR 用 NIC 未接続で
+      デフォルトルート側の IP を拾った可能性が高い）
+    """
+    detected: Dict[str, str] = {}
+    for lidar_ip in lidar_ips:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.connect((lidar_ip, 1))
+                detected[lidar_ip] = sock.getsockname()[0]
+        except OSError as e:
+            raise ValueError(f"LiDAR {lidar_ip} への経路がありません（{e}）")
+    if not detected:
+        raise ValueError("検出対象の LiDAR IP がありません")
+    host_ips = set(detected.values())
+    if len(host_ips) > 1:
+        raise ValueError(f"LiDAR ごとに自機 IP が異なります: {detected}")
+    host_ip = host_ips.pop()
+    for lidar_ip in detected:
+        if host_ip.split(".")[:3] != lidar_ip.split(".")[:3]:
+            raise ValueError(
+                f"検出した自機 IP {host_ip} が LiDAR {lidar_ip} と同一 /24 にありません。"
+                " LiDAR 用 NIC が未接続の可能性があります"
+            )
+    return host_ip
+
+
+def get_config_host_ips(config_path: Union[str, Path]) -> list[str]:
+    """config 内の host_net_info に設定済み（空でない）の IP を重複なしで返す。"""
+    with open(Path(config_path).expanduser()) as f:
+        cfg = json.load(f)
+    host_ips = []
+    for section in cfg.values():
+        if not isinstance(section, dict):
+            continue
+        host_net_info = section.get("host_net_info", {})
+        for key, value in host_net_info.items():
+            if key.endswith("_ip") and value and value not in host_ips:
+                host_ips.append(value)
+    return host_ips
+
+
+def apply_host_ip_to_config(
+    config_path: Union[str, Path],
+    host_ip: str,
+    backup: bool = True,
+) -> list[str]:
+    """host_net_info の設定済み（空でない）IP を host_ip に書き換える。
+
+    Returns
+    -------
+    list[str]
+        書き換え前の IP のリスト（変更が不要だった場合は空）
+    """
+    config_path = Path(config_path).expanduser().resolve()
+    with open(config_path) as f:
+        cfg = json.load(f)
+
+    old_ips = []
+    for section in cfg.values():
+        if not isinstance(section, dict):
+            continue
+        host_net_info = section.get("host_net_info")
+        if not isinstance(host_net_info, dict):
+            continue
+        for key, value in host_net_info.items():
+            if key.endswith("_ip") and value and value != host_ip:
+                if value not in old_ips:
+                    old_ips.append(value)
+                host_net_info[key] = host_ip
+
+    if not old_ips:
+        return []
+
+    if backup:
+        shutil.copy2(config_path, str(config_path) + ".bak")
+    with open(config_path, "w") as f:
+        json.dump(cfg, f, indent=2)
+        f.write("\n")
+    return old_ips
 
 
 def deploy_master_config(
@@ -313,15 +406,30 @@ def _print_target_summary(
         print("配備先: なし（ワークスペース未検出、または --no-deploy）")
 
 
+def _print_host_ip_summary(
+    master_path: Union[str, Path], host_ip: Optional[str]
+) -> None:
+    """host_net_info の書き換え予定を表示する。"""
+    if host_ip is None:
+        return
+    current_ips = get_config_host_ips(master_path)
+    if current_ips == [host_ip]:
+        print(f"host_net_info: {host_ip}（自動検出と一致、変更なし）")
+    else:
+        print(f"host_net_info: {', '.join(current_ips)} -> {host_ip}（自機 IP を自動検出）")
+
+
 def print_update_preview(
     master_path: Union[str, Path],
     deploy_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
     hap_num_to_yaml: Dict[int, Union[str, Path]],
+    host_ip: Optional[str] = None,
 ) -> None:
     """更新内容のプレビューを表示する。"""
     print("\n--- HAP_config.json 更新プレビュー ---")
     _print_target_summary(master_path, deploy_paths)
+    _print_host_ip_summary(master_path, host_ip)
     for hap_num in hap_nums:
         print(format_extrinsic_summary(hap_num, hap_num_to_yaml[hap_num]))
 
@@ -330,10 +438,12 @@ def print_reset_preview(
     master_path: Union[str, Path],
     deploy_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
+    host_ip: Optional[str] = None,
 ) -> None:
     """リセット内容のプレビューを表示する。"""
     print("\n--- HAP_config.json リセットプレビュー ---")
     _print_target_summary(master_path, deploy_paths)
+    _print_host_ip_summary(master_path, host_ip)
     for hap_num in hap_nums:
         print(format_zero_extrinsic_summary(hap_num))
 
@@ -361,6 +471,17 @@ def print_reflect_hint(deploy_paths: Sequence[Union[str, Path]]) -> None:
         )
 
 
+def _apply_host_ip_and_report(
+    master_path: Union[str, Path], host_ip: Optional[str]
+) -> None:
+    """マスターの host_net_info を自機 IP に書き換え、結果を表示する。"""
+    if host_ip is None:
+        return
+    old_ips = apply_host_ip_to_config(master_path, host_ip, backup=False)
+    if old_ips:
+        print(f"host_net_info を更新しました: {', '.join(old_ips)} -> {host_ip}")
+
+
 def prompt_and_update_hap_config(
     master_path: Union[str, Path],
     deploy_paths: Sequence[Union[str, Path]],
@@ -369,6 +490,7 @@ def prompt_and_update_hap_config(
     hap_num_to_ip: Dict[int, str],
     auto_yes: bool = False,
     backup: bool = True,
+    host_ip: Optional[str] = None,
 ) -> bool:
     """
     確認プロンプトのあとマスターを更新し、ドライバの config へ配備する。
@@ -379,7 +501,7 @@ def prompt_and_update_hap_config(
         更新した場合 True
     """
     master_path = Path(master_path).expanduser().resolve()
-    print_update_preview(master_path, deploy_paths, hap_nums, hap_num_to_yaml)
+    print_update_preview(master_path, deploy_paths, hap_nums, hap_num_to_yaml, host_ip)
 
     if not auto_yes:
         answer = input(
@@ -396,6 +518,7 @@ def prompt_and_update_hap_config(
     print(f"{master_path} を更新しました（対象 IP: {', '.join(updated)}）")
     if backup:
         print(f"バックアップ: {master_path}.bak")
+    _apply_host_ip_and_report(master_path, host_ip)
     deploy_master_config(master_path, deploy_paths, backup=backup)
     for path in deploy_paths:
         print(f"配備しました: {path}")
@@ -410,6 +533,7 @@ def prompt_and_reset_hap_config(
     hap_num_to_ip: Dict[int, str],
     auto_yes: bool = False,
     backup: bool = True,
+    host_ip: Optional[str] = None,
 ) -> bool:
     """
     確認プロンプトのあと、マスターの指定 HAP をゼロにリセットして配備する。
@@ -420,7 +544,7 @@ def prompt_and_reset_hap_config(
         更新した場合 True
     """
     master_path = Path(master_path).expanduser().resolve()
-    print_reset_preview(master_path, deploy_paths, hap_nums)
+    print_reset_preview(master_path, deploy_paths, hap_nums, host_ip)
 
     if not auto_yes:
         answer = input(
@@ -437,6 +561,7 @@ def prompt_and_reset_hap_config(
     print(f"{master_path} をリセットしました（対象 IP: {', '.join(updated)}）")
     if backup:
         print(f"バックアップ: {master_path}.bak")
+    _apply_host_ip_and_report(master_path, host_ip)
     deploy_master_config(master_path, deploy_paths, backup=backup)
     for path in deploy_paths:
         print(f"配備しました: {path}")
@@ -535,9 +660,21 @@ def main() -> int:
 
     deploy_paths = [] if args.no_deploy else resolve_deploy_paths(args.hap_config)
 
+    target_lidar_ips = [hap_num_to_ip[n] for n in hap_nums if n in hap_num_to_ip]
+    try:
+        host_ip = detect_host_ip(target_lidar_ips)
+    except ValueError as e:
+        host_ip = None
+        print(
+            f"警告: 自機 IP を検出できないため host_net_info は書き換えません（{e}）。\n"
+            "現在の host_net_info が実 IP と異なる場合、ドライバは"
+            "「bind failed」で起動に失敗します。",
+            file=sys.stderr,
+        )
+
     if args.reset:
         if args.dry_run:
-            print_reset_preview(master_path, deploy_paths, hap_nums)
+            print_reset_preview(master_path, deploy_paths, hap_nums, host_ip)
             print("\n（--dry-run のためファイルは更新しませんでした）")
             return 0
 
@@ -549,6 +686,7 @@ def main() -> int:
                 hap_num_to_ip=hap_num_to_ip,
                 auto_yes=args.yes,
                 backup=not args.no_backup,
+                host_ip=host_ip,
             )
         except (KeyError, ValueError) as e:
             print(e, file=sys.stderr)
@@ -562,7 +700,9 @@ def main() -> int:
         return 1
 
     if args.dry_run:
-        print_update_preview(master_path, deploy_paths, hap_nums, hap_num_to_yaml)
+        print_update_preview(
+            master_path, deploy_paths, hap_nums, hap_num_to_yaml, host_ip
+        )
         print("\n（--dry-run のためファイルは更新しませんでした）")
         return 0
 
@@ -575,6 +715,7 @@ def main() -> int:
             hap_num_to_ip=hap_num_to_ip,
             auto_yes=args.yes,
             backup=not args.no_backup,
+            host_ip=host_ip,
         )
     except (KeyError, ValueError) as e:
         print(e, file=sys.stderr)
