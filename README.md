@@ -7,7 +7,7 @@ Livox HAP をプリズム（TS）計測値でキャリブレーションする P
 | ファイル | 役割 |
 |---------|------|
 | `lidar_to_csv.py` | ROS 2 点群 → CSV 記録 |
-| `detectPrismAndCalcHapCoorsys.py` | プリズム検出・外参算出 |
+| `detectPrismAndCalcHapCoorsys.py` | プリズム検出・LiDARの位置姿勢算出 |
 | `showMultiHapPointCloud.py` | 複数 HAP の TS 座標系可視化 |
 | `update_hap_config_from_coorsys.py` | 結果を `HAP_config.json` に反映 |
 | `hap_ip_map.py` / `hap_csv_io.py` | 共通ユーティリティ |
