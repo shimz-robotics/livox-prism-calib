@@ -4,4 +4,4 @@ __pycache__/
 .DS_Store
 
 # Point cloud CSVs are large; keep locally, do not commit
-data/inputData/hap*.csv
+data/input_data/hap*.csv
