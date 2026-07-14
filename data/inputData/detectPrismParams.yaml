@@ -1,0 +1,14 @@
+# detectPrismAndCalcHapCoorsys.py 検出パラメータ
+# 単位はすべて [m]（arm_max のみ無次元）
+
+# TSプリズム3点の二等辺三角形判定（最小辺長差がこれ未満ならエラー）
+diff_distance: 0.05
+
+# 高輝度点クラスタリング半径
+cluster_radius: 0.075
+
+# 形状マッチング（constellation matching）の長さ一致許容誤差
+tolerance: 0.075
+
+# アーム長インデックス行列の最大次元
+arm_max: 1024

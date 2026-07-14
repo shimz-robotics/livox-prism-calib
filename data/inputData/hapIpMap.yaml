@@ -1,0 +1,12 @@
+# HAP 番号 -> LiDAR IP
+# lidar_to_csv.py / update_hap_config_from_coorsys.py が参照する。
+# HAP_config.json の lidar_configs[].ip と一致させること。
+#
+# 点群トピックは IP から自動生成される:
+#   192.168.0.101 -> /livox/lidar_192_168_0_101
+
+hap_num_to_ip:
+  101: "192.168.0.101"
+  102: "192.168.0.102"
+  123: "192.168.1.123"
+  124: "192.168.1.124"
