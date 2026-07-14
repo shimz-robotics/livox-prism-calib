@@ -22,6 +22,36 @@ pip install numpy scipy pyyaml
 
 ---
 
+## 環境構築（ROS 2 ワークスペース）
+
+点群記録・設定反映には ROS 2 Humble と `livox_ros_driver2` のワークスペースが必要です。  
+未構築の場合は、付属のセットアップスクリプトで sudo 不要・自己完結のワークスペースを構築できます。
+
+```bash
+cd /path/to/livox-prism-calib
+./scripts/setup_ros2_ws.sh
+```
+
+構築先はデフォルトでリポジトリ内 `./ros2_livox_ws/`（Git 管理外）です。  
+場所を変えたい場合は引数で指定します（例: `./scripts/setup_ros2_ws.sh ~/ros2_livox_ws`）。
+
+構築されるワークスペースの構成:
+
+```
+ros2_livox_ws/
+  sdk/Livox-SDK2/       # Livox SDK ソース
+  sdk_install/          # SDK のインストール先（/usr/local の代わり）
+  src/livox_ros_driver2/
+  rebuild.sh            # 再ビルド用スクリプト
+```
+
+- 再ビルド（SDK・ドライバのソース更新後など）は `./ros2_livox_ws/rebuild.sh` を実行します。公式の `build.sh` は SDK が `/usr/local` にある前提のため、このワークスペースでは使えません。
+- ワークスペースを別の場所へ移動した場合はクリーン再ビルドが必要です（`rm -rf build install log sdk_install sdk/Livox-SDK2/build` → `./rebuild.sh`。RPATH と colcon 生成物に絶対パスが埋まるため）。
+- ワークスペースのディレクトリを丸ごと削除すれば環境も消えます（`/usr/local` を汚しません）。
+- sudo が使える環境で公式手順（`/usr/local` へのインストール）を使う場合は [Livox-SDK2](https://github.com/Livox-SDK/Livox-SDK2) / [livox_ros_driver2](https://github.com/Livox-SDK/livox_ros_driver2) の README を参照してください。
+
+---
+
 ## 入力ファイル構成
 
 ```
@@ -101,7 +131,7 @@ ROS 2 上の Livox HAP 点群を CSV に記録します。
 
 #### 前提
 
-- `livox_ros_driver2` のワークスペースをビルド済みであること（場所はリポジトリ内 `ros2_livox_ws/` または `~/ros2_livox_ws`。以下の例は `~/ros2_livox_ws` の場合）
+- `livox_ros_driver2` のワークスペースをビルド済みであること（未構築の場合は「環境構築（ROS 2 ワークスペース）」を参照。以下の例はリポジトリ内 `./ros2_livox_ws` の場合。`~/ros2_livox_ws` などに置いた場合はパスを読み替え）
 - `HAP_config.json` の IP 設定が実機と一致していること
 - `rviz_HAP_launch.py` で `multi_topic=1`（LiDAR ごとにトピックが分かれる設定）
 
@@ -132,11 +162,15 @@ hap_num_to_ip:
 **ターミナル 1** — LiDAR ドライバと RViz を起動:
 
 ```bash
+cd /path/to/livox-prism-calib
+```
+
+```bash
 source /opt/ros/humble/setup.bash
 ```
 
 ```bash
-source ~/ros2_livox_ws/install/setup.bash
+source ./ros2_livox_ws/install/setup.bash
 ```
 
 ```bash
@@ -154,7 +188,7 @@ source /opt/ros/humble/setup.bash
 ```
 
 ```bash
-source ~/ros2_livox_ws/install/setup.bash
+source ./ros2_livox_ws/install/setup.bash
 ```
 
 HAP101 → `data/input_data/hap101.csv`:
@@ -602,11 +636,15 @@ python3 update_hap_config_from_coorsys.py --reset -n 124
 ## LiDARドライバ起動
 
 ```bash
+cd /path/to/livox-prism-calib
+```
+
+```bash
 source /opt/ros/humble/setup.bash
 ```
 
 ```bash
-source ~/ros2_livox_ws/install/setup.bash
+source ./ros2_livox_ws/install/setup.bash
 ```
 
 ```bash
