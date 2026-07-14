@@ -1,6 +1,6 @@
 # LiDAR（HAP）プリズムキャリブレーション マニュアル
 
-スクリプトの保存先: このリポジトリのルート（`livox_calib/`）
+スクリプトの保存先: このリポジトリのルート（`livox-prism-calib/`）
 
 ---
 
@@ -91,13 +91,13 @@ Rotation:
 ## 実行方法
 
 ```bash
-cd /path/to/livox_calib
+cd /path/to/livox-prism-calib
 ```
 
 ### キャリブレーション用点群データの取得
 
 ROS 2 上の Livox HAP 点群を CSV に記録します。  
-スクリプト: `livox_calib/lidar_to_csv.py`
+スクリプト: `lidar_to_csv.py`
 
 #### 前提
 
@@ -146,7 +146,7 @@ ros2 launch livox_ros_driver2 rviz_HAP_launch.py
 **ターミナル 2** — 点群を CSV に記録（例: HAP101 を 10 秒）:
 
 ```bash
-cd /path/to/livox_calib
+cd /path/to/livox-prism-calib
 ```
 
 ```bash
@@ -210,7 +210,7 @@ sudo apt install ros-humble-sensor-msgs-py
 ### キャリブレーションの実行
 
 ```bash
-cd /path/to/livox_calib
+cd /path/to/livox-prism-calib
 ```
 
 デフォルト値で実行（HAP番号=101、データフォルダ=./data）:
@@ -281,7 +281,7 @@ python3 detectPrismAndCalcHapCoorsys.py -n 101 -d ./data
 python3 detectPrismAndCalcHapCoorsys.py -n 101 -d ./data --config ./data/inputData/detectPrismParams.yaml
 ```
 
-> **補足**: `--config` を省略した場合、デフォルトは `livox_calib/data/inputData/detectPrismParams.yaml` です（`--data-folder` とは独立）。
+> **補足**: `--config` を省略した場合、デフォルトは `data/inputData/detectPrismParams.yaml` です（`--data-folder` とは独立）。
 
 ##### その他の確認事項
 
@@ -363,7 +363,7 @@ pip install open3d
 デフォルト（HAP101 赤 + HAP102 青）:
 
 ```bash
-cd /path/to/livox_calib
+cd /path/to/livox-prism-calib
 ```
 
 ```bash
@@ -443,7 +443,7 @@ HAP 番号 → JSON 上の IP は `data/inputData/hapIpMap.yaml` で解決しま
 ### 実行方法
 
 ```bash
-cd /path/to/livox_calib
+cd /path/to/livox-prism-calib
 ```
 
 デフォルト（HAP101 + HAP102、確認プロンプトあり）:
@@ -586,7 +586,7 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 ## JSONファイルのリセット
 
 ```bash
-cd /path/to/livox_calib
+cd /path/to/livox-prism-calib
 ```
 
 ```bash
@@ -614,7 +614,7 @@ ros2 launch livox_ros_driver2 rviz_HAP_launch.py
 ## 点群データ取得
 
 ```bash
-cd /path/to/livox_calib
+cd /path/to/livox-prism-calib
 ```
 
 ```bash

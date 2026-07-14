@@ -28,7 +28,7 @@ pip install -r requirements.txt
 ## クイックスタート
 
 ```bash
-cd /path/to/livox_calib
+cd /path/to/livox-prism-calib
 
 # 1. 点群記録（ROS 2 環境を sourced した状態で）
 python3 lidar_to_csv.py --hap-num 123
