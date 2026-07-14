@@ -436,9 +436,9 @@ python3 show_multi_hap_point_cloud.py --hap-num1 101 --hap-num2 102 --data-folde
 
 ## HAP_config.json への反映
 
-キャリブ結果 YAML の内容を  
-`ros2_livox_ws/src/livox_ros_driver2/config/HAP_config.json` の  
-`lidar_configs[].extrinsic_parameter` に書き込みます。
+キャリブ結果 YAML の内容を、本リポジトリ管理のマスター  
+`data/HAP_config.json` の `lidar_configs[].extrinsic_parameter` に書き込み、  
+ワークスペースのドライバ config（src 側・install 側）へ配備（コピー）します。
 
 可視化で結果を確認したあと、別スクリプトで反映してください。
 
@@ -554,7 +554,9 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 | -------------------- | ---------- | ------------------------------------------------- | --------------------------------------- |
 | `--hap-num N ...`    | `-n N ...` | `101 102`                                         | 対象 HAP 番号（複数指定可）                        |
 | `--data-folder PATH` | `-d PATH`  | `./data`（リポジトリ内） | キャリブ YAML の親フォルダ（`--reset` 時は未使用）       |
-| `--hap-config PATH`  |            | `<WS>/src/livox_ros_driver2/config/HAP_config.json`（`<WS>` は `LIVOX_WS` → `./ros2_livox_ws` → `~/ros2_livox_ws` の順で解決） | 更新先 Livox 設定 JSON（src 側。install 側の実体コピーも自動更新） |
+| `--master PATH`      |            | `data/HAP_config.json`（リポジトリ内） | マスター HAP_config.json（キャリブ結果の反映先）        |
+| `--hap-config PATH`  |            | `<WS>/src/livox_ros_driver2/config/HAP_config.json`（`<WS>` は `LIVOX_WS` → `./ros2_livox_ws` → `~/ros2_livox_ws` の順で解決） | 配備先ドライバ config（src 側。install 側は自動導出） |
+| `--no-deploy`        |            | （オフ）                                              | マスターのみ更新し、ドライバ config へ配備しない          |
 | `--ip-map PATH`      |            | `data/input_data/hap_ip_map.yaml`                    | HAP番号→IP マップ YAML                        |
 | `--reset`            |            | （オフ）                                              | 指定 HAP の `extrinsic_parameter` をゼロにリセット |
 | `--yes`              | `-y`       | （オフ）                                              | 確認プロンプトをスキップして更新                        |
@@ -564,10 +566,12 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 
 ### 注意
 
-- 更新前に `HAP_config.json.bak` が作成されます（`--no-backup` 指定時を除く）
-- ドライバが実行時に読むのは install 側（`<WS>/install/livox_ros_driver2/share/livox_ros_driver2/config/HAP_config.json`）の実体コピーです。スクリプトは src 側に加えて install 側も（存在すれば）自動更新します
-- src 側と install 側の両方が更新された場合、**livox_ros_driver2 の再起動**後に点群へ反映されます
-- install 側が見つからない場合（警告が表示されます）は src 側のみの更新となり、反映にはワークスペースのリビルドが必要です
+- 現場設定の真実（マスター）は本リポジトリの `data/HAP_config.json` です。IP 構成の変更やキャリブ結果はまずマスターに反映し、ドライバへは本スクリプトで配備します。ドライバ側 config を直接編集しても、次回の配備で上書きされます
+- 更新・配備前に各ファイルの `.bak` が作成されます（`--no-backup` 指定時を除く）
+- ドライバが実行時に読むのは install 側（`<WS>/install/livox_ros_driver2/share/livox_ros_driver2/config/HAP_config.json`）の実体コピーです。スクリプトは src 側・install 側の両方へ配備します
+- install 側まで配備された場合、**livox_ros_driver2 の再起動**後に点群へ反映されます
+- install 側が見つからない場合（警告が表示されます）は src 側のみの配備となり、反映にはワークスペースのリビルドが必要です
+- 起動時に `hap_ip_map.yaml` とマスターの `lidar_configs[].ip` の不一致をチェックし、警告を表示します（二重管理の不一致検出）
 
 ### 処理フロー（キャリブ結果の反映）
 
@@ -578,7 +582,9 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
        ↓
 3. hap_ip_map.yaml で HAP 番号 → LiDAR IP を解決
        ↓
-4. プレビュー表示 → 確認後、HAP_config.json（src 側・install 側）を更新
+4. プレビュー表示 → 確認後、マスター（data/HAP_config.json）を更新
+       ↓
+5. マスターをドライバ config（src 側・install 側）へ配備
 ```
 
 ### 処理フロー（リセット）
@@ -588,7 +594,9 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
        ↓
 2. 該当 IP の extrinsic_parameter のみをすべて 0 に設定
        ↓
-3. プレビュー表示 → 確認後、HAP_config.json（src 側・install 側）を更新
+3. プレビュー表示 → 確認後、マスター（data/HAP_config.json）を更新
+       ↓
+4. マスターをドライバ config（src 側・install 側）へ配備
 ```
 
 ---
@@ -604,11 +612,12 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 | `detect_prism_and_calc_hap_coorsys.py`          | プリズム検出・キャリブスクリプト                             |
 | `data/input_data/detect_prism_params.yaml`    | プリズム検出パラメータ（`cluster_radius`, `tolerance` 等） |
 | `data/input_data/hap_ip_map.yaml`             | HAP番号 → LiDAR IP（点群記録・config 反映で共用）           |
+| `data/HAP_config.json`             | 現場設定マスター（Git 管理、キャリブ結果の反映先）             |
 | `show_multi_hap_point_cloud.py`                | HAP 点群の TS 座標系可視化                            |
 | `update_hap_config_from_coorsys.py`        | キャリブ YAML → HAP_config.json 反映               |
 | `data/`                                    | 点群 CSV（`input_data`）・キャリブ結果（`output_data`）     |
 | `matlab_ws/LivoxCalibByPrisms/`（別リポジトリ） | 元の MATLAB 実装（参考）                             |
-| `<WS>/src/livox_ros_driver2/config/HAP_config.json` | 反映先 Livox ドライバ設定（`<WS>` はワークスペースの場所。install 側の実体コピーにも自動反映）          |
+| `<WS>/src/livox_ros_driver2/config/HAP_config.json` | 配備先 Livox ドライバ設定（`<WS>` はワークスペースの場所。install 側にも配備）          |
 
 
 # 大まかな手順

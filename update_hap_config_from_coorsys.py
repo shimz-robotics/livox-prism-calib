@@ -2,7 +2,9 @@
 """
 update_hap_config_from_coorsys.py
 
-hap<N>_coorsys_py.yaml の位置・姿勢を HAP_config.json の extrinsic_parameter に反映する。
+hap<N>_coorsys_py.yaml の位置・姿勢を、本リポジトリ管理のマスター
+data/HAP_config.json の extrinsic_parameter に反映し、
+ドライバのワークスペース config（src 側・install 側）へ配備コピーする。
 
 使い方:
   python3 update_hap_config_from_coorsys.py [--hap-num N ...] [--data-folder PATH]
@@ -10,7 +12,9 @@ hap<N>_coorsys_py.yaml の位置・姿勢を HAP_config.json の extrinsic_param
 オプション:
   --hap-num N ...     対象 HAP 番号（複数指定可、デフォルト: 101 102）
   --data-folder PATH  キャリブ YAML の親フォルダ（output_data を含む）
-  --hap-config PATH   更新先 HAP_config.json
+  --master PATH       マスター HAP_config.json（デフォルト: data/HAP_config.json）
+  --hap-config PATH   配備先ドライバ config（src 側。install 側は自動導出）
+  --no-deploy         マスターのみ更新し、ドライバ config へ配備しない
   --ip-map PATH       HAP番号→IP マップ YAML（デフォルト: data/input_data/hap_ip_map.yaml）
   --yes               確認プロンプトをスキップして更新
   --no-backup         更新前の .bak を作成しない
@@ -50,6 +54,7 @@ def _default_ws_dir() -> Path:
 
 
 DEFAULT_HAP_CONFIG_PATH = _default_ws_dir() / "src/livox_ros_driver2/config/HAP_config.json"
+DEFAULT_MASTER_CONFIG_PATH = SCRIPT_DIR / "data/HAP_config.json"
 
 
 def derive_install_config_path(config_path: Union[str, Path]) -> Optional[Path]:
@@ -70,6 +75,59 @@ def derive_install_config_path(config_path: Union[str, Path]) -> Optional[Path]:
     if not install_path.is_file():
         return None
     return install_path
+
+
+def resolve_deploy_paths(hap_config_path: Union[str, Path]) -> list[Path]:
+    """配備先（ワークスペースの src 側・install 側 config）を解決する。
+
+    src 側が存在しなければ空リスト（ワークスペース未構築）。
+    install 側が src 側と同一実体の場合（--symlink-install）は src 側のみ。
+    """
+    src = Path(hap_config_path).expanduser()
+    if not src.is_file():
+        return []
+    src = src.resolve()
+    paths = [src]
+    install = derive_install_config_path(src)
+    if install is not None and install.resolve() != src:
+        paths.append(install)
+    return paths
+
+
+def check_ip_map_consistency(
+    config_path: Union[str, Path], hap_num_to_ip: Dict[int, str]
+) -> list[str]:
+    """マスター config と hap_ip_map.yaml の IP の不一致を警告文リストで返す。"""
+    with open(Path(config_path).expanduser()) as f:
+        cfg = json.load(f)
+    config_ips = {e.get("ip") for e in cfg.get("lidar_configs", [])}
+    map_ips = set(hap_num_to_ip.values())
+    warnings = []
+    only_in_map = sorted(map_ips - config_ips)
+    only_in_config = sorted(config_ips - map_ips)
+    if only_in_map:
+        warnings.append(
+            f"hap_ip_map.yaml にあるが HAP_config.json にない IP: {only_in_map}"
+        )
+    if only_in_config:
+        warnings.append(
+            f"HAP_config.json にあるが hap_ip_map.yaml にない IP: {only_in_config}"
+        )
+    return warnings
+
+
+def deploy_master_config(
+    master_path: Union[str, Path],
+    deploy_paths: Sequence[Union[str, Path]],
+    backup: bool = True,
+) -> None:
+    """マスター config をドライバの config へ配備（丸ごとコピー）する。"""
+    master_path = Path(master_path).expanduser().resolve()
+    for path in deploy_paths:
+        path = Path(path).expanduser().resolve()
+        if backup and path.is_file():
+            shutil.copy2(path, str(path) + ".bak")
+        shutil.copy2(master_path, path)
 DEFAULT_DATA_FOLDER = SCRIPT_DIR / "data"
 DEFAULT_HAP_NUMS = (101, 102)
 
@@ -242,50 +300,70 @@ def format_zero_extrinsic_summary(hap_num: int) -> str:
     )
 
 
+def _print_target_summary(
+    master_path: Union[str, Path],
+    deploy_paths: Sequence[Union[str, Path]],
+) -> None:
+    """マスター・配備先の一覧を表示する。"""
+    print(f"マスター: {Path(master_path).expanduser().resolve()}")
+    if deploy_paths:
+        for path in deploy_paths:
+            print(f"配備先: {Path(path).expanduser().resolve()}")
+    else:
+        print("配備先: なし（ワークスペース未検出、または --no-deploy）")
+
+
 def print_update_preview(
-    config_paths: Sequence[Union[str, Path]],
+    master_path: Union[str, Path],
+    deploy_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
     hap_num_to_yaml: Dict[int, Union[str, Path]],
 ) -> None:
     """更新内容のプレビューを表示する。"""
     print("\n--- HAP_config.json 更新プレビュー ---")
-    for config_path in config_paths:
-        print(f"対象ファイル: {Path(config_path).expanduser().resolve()}")
+    _print_target_summary(master_path, deploy_paths)
     for hap_num in hap_nums:
         print(format_extrinsic_summary(hap_num, hap_num_to_yaml[hap_num]))
 
 
 def print_reset_preview(
-    config_paths: Sequence[Union[str, Path]],
+    master_path: Union[str, Path],
+    deploy_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
 ) -> None:
     """リセット内容のプレビューを表示する。"""
     print("\n--- HAP_config.json リセットプレビュー ---")
-    for config_path in config_paths:
-        print(f"対象ファイル: {Path(config_path).expanduser().resolve()}")
+    _print_target_summary(master_path, deploy_paths)
     for hap_num in hap_nums:
         print(format_zero_extrinsic_summary(hap_num))
 
 
-def print_reflect_hint(config_paths: Sequence[Union[str, Path]]) -> None:
+def print_reflect_hint(deploy_paths: Sequence[Union[str, Path]]) -> None:
     """更新結果を実行時に反映するために必要な操作を案内する。"""
+    if not deploy_paths:
+        print(
+            "警告: ドライバの config へ配備していないため、実行時には反映されません。\n"
+            "ワークスペース構築後（scripts/setup_ros2_ws.sh 参照）に再実行してください。"
+        )
+        return
     install_covered = any(
         "install" in Path(p).resolve().parts
         or derive_install_config_path(p) is not None
-        for p in config_paths
+        for p in deploy_paths
     )
     if install_covered:
         print("反映には livox_ros_driver2 の再起動が必要です。")
     else:
         print(
             "警告: ドライバが実行時に読む install 側の config が見つからないため、"
-            "src 側のみ更新しました。\n"
+            "src 側のみに配備しました。\n"
             "点群への反映にはワークスペースのリビルドが必要です。"
         )
 
 
 def prompt_and_update_hap_config(
-    config_paths: Sequence[Union[str, Path]],
+    master_path: Union[str, Path],
+    deploy_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
     hap_num_to_yaml: Dict[int, Union[str, Path]],
     hap_num_to_ip: Dict[int, str],
@@ -293,15 +371,15 @@ def prompt_and_update_hap_config(
     backup: bool = True,
 ) -> bool:
     """
-    確認プロンプトのあと HAP_config.json（src 側・install 側）を更新する。
+    確認プロンプトのあとマスターを更新し、ドライバの config へ配備する。
 
     Returns
     -------
     bool
         更新した場合 True
     """
-    config_paths = [Path(p).expanduser().resolve() for p in config_paths]
-    print_update_preview(config_paths, hap_nums, hap_num_to_yaml)
+    master_path = Path(master_path).expanduser().resolve()
+    print_update_preview(master_path, deploy_paths, hap_nums, hap_num_to_yaml)
 
     if not auto_yes:
         answer = input(
@@ -312,34 +390,37 @@ def prompt_and_update_hap_config(
             return False
 
     print()
-    for config_path in config_paths:
-        updated = update_hap_config_extrinsics(
-            config_path, hap_num_to_yaml, hap_num_to_ip, backup=backup
-        )
-        print(f"{config_path} を更新しました（対象 IP: {', '.join(updated)}）")
-        if backup:
-            print(f"バックアップ: {config_path}.bak")
-    print_reflect_hint(config_paths)
+    updated = update_hap_config_extrinsics(
+        master_path, hap_num_to_yaml, hap_num_to_ip, backup=backup
+    )
+    print(f"{master_path} を更新しました（対象 IP: {', '.join(updated)}）")
+    if backup:
+        print(f"バックアップ: {master_path}.bak")
+    deploy_master_config(master_path, deploy_paths, backup=backup)
+    for path in deploy_paths:
+        print(f"配備しました: {path}")
+    print_reflect_hint(deploy_paths)
     return True
 
 
 def prompt_and_reset_hap_config(
-    config_paths: Sequence[Union[str, Path]],
+    master_path: Union[str, Path],
+    deploy_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
     hap_num_to_ip: Dict[int, str],
     auto_yes: bool = False,
     backup: bool = True,
 ) -> bool:
     """
-    確認プロンプトのあと、指定 HAP の extrinsic_parameter をゼロにリセットする。
+    確認プロンプトのあと、マスターの指定 HAP をゼロにリセットして配備する。
 
     Returns
     -------
     bool
         更新した場合 True
     """
-    config_paths = [Path(p).expanduser().resolve() for p in config_paths]
-    print_reset_preview(config_paths, hap_nums)
+    master_path = Path(master_path).expanduser().resolve()
+    print_reset_preview(master_path, deploy_paths, hap_nums)
 
     if not auto_yes:
         answer = input(
@@ -350,14 +431,16 @@ def prompt_and_reset_hap_config(
             return False
 
     print()
-    for config_path in config_paths:
-        updated = reset_hap_config_extrinsics(
-            config_path, hap_nums, hap_num_to_ip, backup=backup
-        )
-        print(f"{config_path} をリセットしました（対象 IP: {', '.join(updated)}）")
-        if backup:
-            print(f"バックアップ: {config_path}.bak")
-    print_reflect_hint(config_paths)
+    updated = reset_hap_config_extrinsics(
+        master_path, hap_nums, hap_num_to_ip, backup=backup
+    )
+    print(f"{master_path} をリセットしました（対象 IP: {', '.join(updated)}）")
+    if backup:
+        print(f"バックアップ: {master_path}.bak")
+    deploy_master_config(master_path, deploy_paths, backup=backup)
+    for path in deploy_paths:
+        print(f"配備しました: {path}")
+    print_reflect_hint(deploy_paths)
     return True
 
 
@@ -383,11 +466,23 @@ def parse_args() -> argparse.Namespace:
         help=f"データフォルダ（デフォルト: {DEFAULT_DATA_FOLDER}）",
     )
     parser.add_argument(
+        "--master",
+        type=str,
+        default=str(DEFAULT_MASTER_CONFIG_PATH),
+        metavar="PATH",
+        help=f"マスター HAP_config.json（デフォルト: {DEFAULT_MASTER_CONFIG_PATH}）",
+    )
+    parser.add_argument(
         "--hap-config",
         type=str,
         default=str(DEFAULT_HAP_CONFIG_PATH),
         metavar="PATH",
-        help="更新先 HAP_config.json のパス",
+        help="配備先ドライバ config（src 側。install 側は自動導出）",
+    )
+    parser.add_argument(
+        "--no-deploy",
+        action="store_true",
+        help="マスターのみ更新し、ドライバ config へ配備しない",
     )
     parser.add_argument(
         "--ip-map",
@@ -423,19 +518,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     hap_nums = args.hap_num
-    config_path = Path(args.hap_config).expanduser()
+    master_path = Path(args.master).expanduser()
 
-    if not config_path.is_file():
-        print(f"HAP_config.json が見つかりません: {config_path}", file=sys.stderr)
+    if not master_path.is_file():
+        print(f"マスター HAP_config.json が見つかりません: {master_path}", file=sys.stderr)
         return 1
-
-    install_config_path = derive_install_config_path(config_path)
-    config_paths = [config_path]
-    if (
-        install_config_path is not None
-        and install_config_path.resolve() != config_path.resolve()
-    ):
-        config_paths.append(install_config_path)
 
     try:
         hap_num_to_ip = load_hap_num_to_ip(args.ip_map)
@@ -443,15 +530,21 @@ def main() -> int:
         print(e, file=sys.stderr)
         return 1
 
+    for warning in check_ip_map_consistency(master_path, hap_num_to_ip):
+        print(f"警告: {warning}", file=sys.stderr)
+
+    deploy_paths = [] if args.no_deploy else resolve_deploy_paths(args.hap_config)
+
     if args.reset:
         if args.dry_run:
-            print_reset_preview(config_paths, hap_nums)
+            print_reset_preview(master_path, deploy_paths, hap_nums)
             print("\n（--dry-run のためファイルは更新しませんでした）")
             return 0
 
         try:
             prompt_and_reset_hap_config(
-                config_paths=config_paths,
+                master_path=master_path,
+                deploy_paths=deploy_paths,
                 hap_nums=hap_nums,
                 hap_num_to_ip=hap_num_to_ip,
                 auto_yes=args.yes,
@@ -469,13 +562,14 @@ def main() -> int:
         return 1
 
     if args.dry_run:
-        print_update_preview(config_paths, hap_nums, hap_num_to_yaml)
+        print_update_preview(master_path, deploy_paths, hap_nums, hap_num_to_yaml)
         print("\n（--dry-run のためファイルは更新しませんでした）")
         return 0
 
     try:
         prompt_and_update_hap_config(
-            config_paths=config_paths,
+            master_path=master_path,
+            deploy_paths=deploy_paths,
             hap_nums=hap_nums,
             hap_num_to_yaml=hap_num_to_yaml,
             hap_num_to_ip=hap_num_to_ip,

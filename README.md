@@ -11,6 +11,7 @@ Livox HAP をプリズム（TS）計測値でキャリブレーションする P
 | `show_multi_hap_point_cloud.py` | 複数 HAP の TS 座標系可視化 |
 | `update_hap_config_from_coorsys.py` | 結果を `HAP_config.json` に反映 |
 | `hap_ip_map.py` / `hap_csv_io.py` | 共通ユーティリティ |
+| `data/HAP_config.json` | 現場設定マスター（キャリブ結果の反映先、ドライバへ配備） |
 | `data/input_data/` | 入力（パラメータ・プリズム位置・点群 CSV） |
 | `data/output_data/` | キャリブ結果 YAML |
 | `docs/livox_calib_manual.md` | 手順マニュアル |
@@ -42,8 +43,8 @@ python3 update_hap_config_from_coorsys.py -n 123
 ```
 
 デフォルトのデータフォルダはリポジトリ内の `./data` です。  
-`update_hap_config_from_coorsys.py` のデフォルト更新先はワークスペース内の `src/livox_ros_driver2/config/HAP_config.json` です（実行時にドライバが読む install 側の実体コピーも存在すれば同時に更新されます）。  
-ワークスペースは環境変数 `LIVOX_WS` → リポジトリ内 `./ros2_livox_ws` → `~/ros2_livox_ws` の順で自動解決されます（`--hap-config` で直接指定も可）。
+`update_hap_config_from_coorsys.py` は本リポジトリ管理のマスター `data/HAP_config.json` を更新し、ワークスペース内のドライバ config（src 側と、実行時に読まれる install 側の実体コピー）へ配備します。  
+ワークスペースは環境変数 `LIVOX_WS` → リポジトリ内 `./ros2_livox_ws` → `~/ros2_livox_ws` の順で自動解決されます（`--hap-config` で配備先の直接指定、`--no-deploy` でマスターのみ更新も可）。
 
 ## 注意
 
