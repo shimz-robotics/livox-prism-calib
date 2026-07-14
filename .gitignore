@@ -3,5 +3,8 @@ __pycache__/
 *.bak
 .DS_Store
 
+# Cursor rules/config — keep local to this machine
+.cursor/
+
 # Point cloud CSVs are large; keep locally, do not commit
 data/input_data/hap*.csv
