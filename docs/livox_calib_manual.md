@@ -520,7 +520,7 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 | -------------------- | ---------- | ------------------------------------------------- | --------------------------------------- |
 | `--hap-num N ...`    | `-n N ...` | `101 102`                                         | 対象 HAP 番号（複数指定可）                        |
 | `--data-folder PATH` | `-d PATH`  | `./data`（リポジトリ内） | キャリブ YAML の親フォルダ（`--reset` 時は未使用）       |
-| `--hap-config PATH`  |            | `<WS>/src/livox_ros_driver2/config/HAP_config.json`（`<WS>` は `LIVOX_WS` → `./ros2_livox_ws` → `~/ros2_livox_ws` の順で解決） | 更新先 Livox 設定 JSON                       |
+| `--hap-config PATH`  |            | `<WS>/src/livox_ros_driver2/config/HAP_config.json`（`<WS>` は `LIVOX_WS` → `./ros2_livox_ws` → `~/ros2_livox_ws` の順で解決） | 更新先 Livox 設定 JSON（src 側。install 側の実体コピーも自動更新） |
 | `--ip-map PATH`      |            | `data/input_data/hap_ip_map.yaml`                    | HAP番号→IP マップ YAML                        |
 | `--reset`            |            | （オフ）                                              | 指定 HAP の `extrinsic_parameter` をゼロにリセット |
 | `--yes`              | `-y`       | （オフ）                                              | 確認プロンプトをスキップして更新                        |
@@ -531,7 +531,9 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 ### 注意
 
 - 更新前に `HAP_config.json.bak` が作成されます（`--no-backup` 指定時を除く）
-- **livox_ros_driver2 の再起動**後に点群へ反映されます
+- ドライバが実行時に読むのは install 側（`<WS>/install/livox_ros_driver2/share/livox_ros_driver2/config/HAP_config.json`）の実体コピーです。スクリプトは src 側に加えて install 側も（存在すれば）自動更新します
+- src 側と install 側の両方が更新された場合、**livox_ros_driver2 の再起動**後に点群へ反映されます
+- install 側が見つからない場合（警告が表示されます）は src 側のみの更新となり、反映にはワークスペースのリビルドが必要です
 
 ### 処理フロー（キャリブ結果の反映）
 
@@ -542,7 +544,7 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
        ↓
 3. hap_ip_map.yaml で HAP 番号 → LiDAR IP を解決
        ↓
-4. プレビュー表示 → 確認後、HAP_config.json を更新
+4. プレビュー表示 → 確認後、HAP_config.json（src 側・install 側）を更新
 ```
 
 ### 処理フロー（リセット）
@@ -552,7 +554,7 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
        ↓
 2. 該当 IP の extrinsic_parameter のみをすべて 0 に設定
        ↓
-3. プレビュー表示 → 確認後、HAP_config.json を更新
+3. プレビュー表示 → 確認後、HAP_config.json（src 側・install 側）を更新
 ```
 
 ---
@@ -572,7 +574,7 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 | `update_hap_config_from_coorsys.py`        | キャリブ YAML → HAP_config.json 反映               |
 | `data/`                                    | 点群 CSV（`input_data`）・キャリブ結果（`output_data`）     |
 | `matlab_ws/LivoxCalibByPrisms/`（別リポジトリ） | 元の MATLAB 実装（参考）                             |
-| `<WS>/src/livox_ros_driver2/config/HAP_config.json` | 反映先 Livox ドライバ設定（`<WS>` はワークスペースの場所）          |
+| `<WS>/src/livox_ros_driver2/config/HAP_config.json` | 反映先 Livox ドライバ設定（`<WS>` はワークスペースの場所。install 側の実体コピーにも自動反映）          |
 
 
 # 大まかな手順

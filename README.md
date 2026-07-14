@@ -42,7 +42,7 @@ python3 update_hap_config_from_coorsys.py -n 123
 ```
 
 デフォルトのデータフォルダはリポジトリ内の `./data` です。  
-`update_hap_config_from_coorsys.py` のデフォルト更新先はワークスペース内の `src/livox_ros_driver2/config/HAP_config.json` です。  
+`update_hap_config_from_coorsys.py` のデフォルト更新先はワークスペース内の `src/livox_ros_driver2/config/HAP_config.json` です（実行時にドライバが読む install 側の実体コピーも存在すれば同時に更新されます）。  
 ワークスペースは環境変数 `LIVOX_WS` → リポジトリ内 `./ros2_livox_ws` → `~/ros2_livox_ws` の順で自動解決されます（`--hap-config` で直接指定も可）。
 
 ## 注意

@@ -26,7 +26,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, Union
+from typing import Dict, Iterable, Optional, Sequence, Union
 
 import yaml
 
@@ -50,6 +50,26 @@ def _default_ws_dir() -> Path:
 
 
 DEFAULT_HAP_CONFIG_PATH = _default_ws_dir() / "src/livox_ros_driver2/config/HAP_config.json"
+
+
+def derive_install_config_path(config_path: Union[str, Path]) -> Optional[Path]:
+    """src 側 config パスから、ドライバが実行時に読む install 側のパスを導出する。
+
+    通常の colcon build では install 側は実体コピーのため、src 側だけ更新しても
+    実行時に反映されない。install 側が存在しない場合は None を返す。
+    --symlink-install の場合は src 側と同一実体の symlink パスが返る。
+    """
+    config_path = Path(config_path).expanduser().resolve()
+    parts = config_path.parts
+    if len(parts) < 4 or parts[-4:-1] != ("src", "livox_ros_driver2", "config"):
+        return None
+    ws_dir = Path(*parts[:-4])
+    install_path = (
+        ws_dir / "install/livox_ros_driver2/share/livox_ros_driver2/config" / parts[-1]
+    )
+    if not install_path.is_file():
+        return None
+    return install_path
 DEFAULT_DATA_FOLDER = SCRIPT_DIR / "data"
 DEFAULT_HAP_NUMS = (101, 102)
 
@@ -223,32 +243,49 @@ def format_zero_extrinsic_summary(hap_num: int) -> str:
 
 
 def print_update_preview(
-    config_path: Union[str, Path],
+    config_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
     hap_num_to_yaml: Dict[int, Union[str, Path]],
 ) -> None:
     """更新内容のプレビューを表示する。"""
-    config_path = Path(config_path).expanduser().resolve()
     print("\n--- HAP_config.json 更新プレビュー ---")
-    print(f"対象ファイル: {config_path}")
+    for config_path in config_paths:
+        print(f"対象ファイル: {Path(config_path).expanduser().resolve()}")
     for hap_num in hap_nums:
         print(format_extrinsic_summary(hap_num, hap_num_to_yaml[hap_num]))
 
 
 def print_reset_preview(
-    config_path: Union[str, Path],
+    config_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
 ) -> None:
     """リセット内容のプレビューを表示する。"""
-    config_path = Path(config_path).expanduser().resolve()
     print("\n--- HAP_config.json リセットプレビュー ---")
-    print(f"対象ファイル: {config_path}")
+    for config_path in config_paths:
+        print(f"対象ファイル: {Path(config_path).expanduser().resolve()}")
     for hap_num in hap_nums:
         print(format_zero_extrinsic_summary(hap_num))
 
 
+def print_reflect_hint(config_paths: Sequence[Union[str, Path]]) -> None:
+    """更新結果を実行時に反映するために必要な操作を案内する。"""
+    install_covered = any(
+        "install" in Path(p).resolve().parts
+        or derive_install_config_path(p) is not None
+        for p in config_paths
+    )
+    if install_covered:
+        print("反映には livox_ros_driver2 の再起動が必要です。")
+    else:
+        print(
+            "警告: ドライバが実行時に読む install 側の config が見つからないため、"
+            "src 側のみ更新しました。\n"
+            "点群への反映にはワークスペースのリビルドが必要です。"
+        )
+
+
 def prompt_and_update_hap_config(
-    config_path: Union[str, Path],
+    config_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
     hap_num_to_yaml: Dict[int, Union[str, Path]],
     hap_num_to_ip: Dict[int, str],
@@ -256,15 +293,15 @@ def prompt_and_update_hap_config(
     backup: bool = True,
 ) -> bool:
     """
-    確認プロンプトのあと HAP_config.json を更新する。
+    確認プロンプトのあと HAP_config.json（src 側・install 側）を更新する。
 
     Returns
     -------
     bool
         更新した場合 True
     """
-    config_path = Path(config_path).expanduser().resolve()
-    print_update_preview(config_path, hap_nums, hap_num_to_yaml)
+    config_paths = [Path(p).expanduser().resolve() for p in config_paths]
+    print_update_preview(config_paths, hap_nums, hap_num_to_yaml)
 
     if not auto_yes:
         answer = input(
@@ -274,18 +311,20 @@ def prompt_and_update_hap_config(
             print("更新をキャンセルしました。")
             return False
 
-    updated = update_hap_config_extrinsics(
-        config_path, hap_num_to_yaml, hap_num_to_ip, backup=backup
-    )
-    print(f"\nHAP_config.json を更新しました（対象 IP: {', '.join(updated)}）")
-    if backup:
-        print(f"バックアップ: {config_path}.bak")
-    print("反映には livox_ros_driver2 の再起動が必要です。")
+    print()
+    for config_path in config_paths:
+        updated = update_hap_config_extrinsics(
+            config_path, hap_num_to_yaml, hap_num_to_ip, backup=backup
+        )
+        print(f"{config_path} を更新しました（対象 IP: {', '.join(updated)}）")
+        if backup:
+            print(f"バックアップ: {config_path}.bak")
+    print_reflect_hint(config_paths)
     return True
 
 
 def prompt_and_reset_hap_config(
-    config_path: Union[str, Path],
+    config_paths: Sequence[Union[str, Path]],
     hap_nums: Iterable[int],
     hap_num_to_ip: Dict[int, str],
     auto_yes: bool = False,
@@ -299,8 +338,8 @@ def prompt_and_reset_hap_config(
     bool
         更新した場合 True
     """
-    config_path = Path(config_path).expanduser().resolve()
-    print_reset_preview(config_path, hap_nums)
+    config_paths = [Path(p).expanduser().resolve() for p in config_paths]
+    print_reset_preview(config_paths, hap_nums)
 
     if not auto_yes:
         answer = input(
@@ -310,13 +349,15 @@ def prompt_and_reset_hap_config(
             print("リセットをキャンセルしました。")
             return False
 
-    updated = reset_hap_config_extrinsics(
-        config_path, hap_nums, hap_num_to_ip, backup=backup
-    )
-    print(f"\nHAP_config.json をリセットしました（対象 IP: {', '.join(updated)}）")
-    if backup:
-        print(f"バックアップ: {config_path}.bak")
-    print("反映には livox_ros_driver2 の再起動が必要です。")
+    print()
+    for config_path in config_paths:
+        updated = reset_hap_config_extrinsics(
+            config_path, hap_nums, hap_num_to_ip, backup=backup
+        )
+        print(f"{config_path} をリセットしました（対象 IP: {', '.join(updated)}）")
+        if backup:
+            print(f"バックアップ: {config_path}.bak")
+    print_reflect_hint(config_paths)
     return True
 
 
@@ -388,6 +429,14 @@ def main() -> int:
         print(f"HAP_config.json が見つかりません: {config_path}", file=sys.stderr)
         return 1
 
+    install_config_path = derive_install_config_path(config_path)
+    config_paths = [config_path]
+    if (
+        install_config_path is not None
+        and install_config_path.resolve() != config_path.resolve()
+    ):
+        config_paths.append(install_config_path)
+
     try:
         hap_num_to_ip = load_hap_num_to_ip(args.ip_map)
     except (FileNotFoundError, ValueError) as e:
@@ -396,13 +445,13 @@ def main() -> int:
 
     if args.reset:
         if args.dry_run:
-            print_reset_preview(config_path, hap_nums)
+            print_reset_preview(config_paths, hap_nums)
             print("\n（--dry-run のためファイルは更新しませんでした）")
             return 0
 
         try:
             prompt_and_reset_hap_config(
-                config_path=config_path,
+                config_paths=config_paths,
                 hap_nums=hap_nums,
                 hap_num_to_ip=hap_num_to_ip,
                 auto_yes=args.yes,
@@ -420,13 +469,13 @@ def main() -> int:
         return 1
 
     if args.dry_run:
-        print_update_preview(config_path, hap_nums, hap_num_to_yaml)
+        print_update_preview(config_paths, hap_nums, hap_num_to_yaml)
         print("\n（--dry-run のためファイルは更新しませんでした）")
         return 0
 
     try:
         prompt_and_update_hap_config(
-            config_path=config_path,
+            config_paths=config_paths,
             hap_nums=hap_nums,
             hap_num_to_yaml=hap_num_to_yaml,
             hap_num_to_ip=hap_num_to_ip,
