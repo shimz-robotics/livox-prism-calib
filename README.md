@@ -22,7 +22,7 @@ pip install -r requirements.txt
 ```
 
 点群記録・設定反映には ROS 2 と livox_ros_driver2 のワークスペースが必要です。  
-ワークスペースはリポジトリ内 `./ros2_livox_ws/`（Git 管理外）または `~/ros2_livox_ws` に置けます。
+未構築の場合は `./scripts/setup_ros2_ws.sh` で構築できます（sudo 不要、デフォルトはリポジトリ内 `./ros2_livox_ws/`・Git 管理外。`~/ros2_livox_ws` など任意の場所も引数で指定可）。
 
 詳細は [docs/livox_calib_manual.md](docs/livox_calib_manual.md) を参照してください。
 
