@@ -1,4 +1,4 @@
-# livox_calib
+# livox-prism-calib
 
 Livox HAP をプリズム（TS）計測値でキャリブレーションする Python ツール群です。
 
