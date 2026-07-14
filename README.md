@@ -21,7 +21,8 @@ Livox HAP をプリズム（TS）計測値でキャリブレーションする P
 pip install -r requirements.txt
 ```
 
-点群記録・設定反映には ROS 2 と livox_ros_driver2（例: `~/ros2_livox_ws`）が必要です。
+点群記録・設定反映には ROS 2 と livox_ros_driver2 のワークスペースが必要です。  
+ワークスペースはリポジトリ内 `./ros2_livox_ws/`（Git 管理外）または `~/ros2_livox_ws` に置けます。
 
 詳細は [docs/livox_calib_manual.md](docs/livox_calib_manual.md) を参照してください。
 
@@ -41,7 +42,8 @@ python3 update_hap_config_from_coorsys.py -n 123
 ```
 
 デフォルトのデータフォルダはリポジトリ内の `./data` です。  
-`update_hap_config_from_coorsys.py` のデフォルト更新先は `~/ros2_livox_ws/src/livox_ros_driver2/config/HAP_config.json` です（`--hap-config` で変更可）。
+`update_hap_config_from_coorsys.py` のデフォルト更新先はワークスペース内の `src/livox_ros_driver2/config/HAP_config.json` です。  
+ワークスペースは環境変数 `LIVOX_WS` → リポジトリ内 `./ros2_livox_ws` → `~/ros2_livox_ws` の順で自動解決されます（`--hap-config` で直接指定も可）。
 
 ## 注意
 
