@@ -2,15 +2,14 @@
 """
 show_multi_hap_point_cloud.py
 
-2台のHAP点群をTS座標系に変換して3D可視化する。
+複数台の HAP 点群を TS 座標系に変換して 3D 可視化する。
 
 使い方:
-  python3 show_multi_hap_point_cloud.py [--hap-num1 N1] [--hap-num2 N2] [--data-folder PATH]
+  python3 show_multi_hap_point_cloud.py [-n N ...] [--data-folder PATH]
 
 オプション:
-  --hap-num1    N1    1台目の HAP 番号（デフォルト: 101）
-  --hap-num2    N2    2台目の HAP 番号（デフォルト: 102）
-  --data-folder PATH  データフォルダのパス
+  --hap-num, -n  対象 HAP 番号（複数可、デフォルト: 101 102）
+  --data-folder  データフォルダのパス
 
 入力（data-folder 以下）:
   input_data/hap<N>.csv                   : HAP 点群
@@ -32,9 +31,21 @@ from hap_csv_io import load_hap_csv
 
 
 SCRIPT_DIR          = Path(__file__).resolve().parent
-DEFAULT_HAP_NUM1    = 101
-DEFAULT_HAP_NUM2    = 102
+DEFAULT_HAP_NUMS    = [101, 102]
 DEFAULT_DATA_FOLDER = str(SCRIPT_DIR / 'data')
+
+# 台数に応じて割り当てる表示色（3台目以降も区別可能）
+HAP_COLORS = [
+    [1.0, 0.3, 0.3],   # 赤
+    [0.3, 0.6, 1.0],   # 青
+    [0.3, 0.9, 0.4],   # 緑
+    [1.0, 0.85, 0.2],  # 黄
+    [0.8, 0.4, 1.0],   # 紫
+    [1.0, 0.6, 0.2],   # 橙
+    [0.2, 0.9, 0.9],   # シアン
+    [0.9, 0.4, 0.6],   # ピンク
+]
+HAP_COLOR_NAMES = ['赤', '青', '緑', '黄', '紫', '橙', 'シアン', 'ピンク']
 
 
 # ============================================================
@@ -92,68 +103,70 @@ def make_pcd(xyz, color):
     return pcd
 
 
+def hap_color(index):
+    """表示色と色名を返す（パレットを循環）。"""
+    i = index % len(HAP_COLORS)
+    return HAP_COLORS[i], HAP_COLOR_NAMES[i]
+
+
 # ============================================================
 # メイン処理
 # ============================================================
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='2台のHAP点群をTS座標系に変換して3D可視化する'
+        description='複数台の HAP 点群を TS 座標系に変換して 3D 可視化する'
     )
-    parser.add_argument('--hap-num1',    '-n1', type=int, default=DEFAULT_HAP_NUM1,
-                        metavar='N1',   help=f'1台目の HAP 番号（デフォルト: {DEFAULT_HAP_NUM1}）')
-    parser.add_argument('--hap-num2',    '-n2', type=int, default=DEFAULT_HAP_NUM2,
-                        metavar='N2',   help=f'2台目の HAP 番号（デフォルト: {DEFAULT_HAP_NUM2}）')
-    parser.add_argument('--data-folder', '-d',  type=str, default=DEFAULT_DATA_FOLDER,
-                        metavar='PATH', help=f'データフォルダ（デフォルト: {DEFAULT_DATA_FOLDER}）')
+    parser.add_argument(
+        '--hap-num',
+        '-n',
+        type=int,
+        nargs='+',
+        default=list(DEFAULT_HAP_NUMS),
+        metavar='N',
+        help=f"対象 HAP 番号（複数可、デフォルト: {' '.join(map(str, DEFAULT_HAP_NUMS))}）",
+    )
+    parser.add_argument(
+        '--data-folder',
+        '-d',
+        type=str,
+        default=DEFAULT_DATA_FOLDER,
+        metavar='PATH',
+        help=f'データフォルダ（デフォルト: {DEFAULT_DATA_FOLDER}）',
+    )
     return parser.parse_args()
 
 
 def main():
-    args   = parse_args()
-    folder = os.path.expanduser(args.data_folder)
-    n1     = args.hap_num1
-    n2     = args.hap_num2
+    args      = parse_args()
+    folder    = os.path.expanduser(args.data_folder)
+    hap_nums  = args.hap_num
 
-    print(f"HAP番号1    : {n1}")
-    print(f"HAP番号2    : {n2}")
+    print(f"HAP番号     : {' '.join(map(str, hap_nums))}")
     print(f"データフォルダ: {folder}\n")
 
-    # ----------------------------------------------------------------
-    # 点群読み込み
-    # ----------------------------------------------------------------
-    xyz1, _ = load_pointcloud_from_csv(
-        os.path.join(folder, 'input_data', f'hap{n1}.csv'))
-    xyz2, _ = load_pointcloud_from_csv(
-        os.path.join(folder, 'input_data', f'hap{n2}.csv'))
+    pcds         = []
+    legend_parts = []
 
-    # ----------------------------------------------------------------
-    # 変換行列読み込み（YAML → 4×4 同次変換行列）
-    # ----------------------------------------------------------------
-    yaml1 = os.path.join(folder, 'output_data', f'hap{n1}_coorsys_py.yaml')
-    yaml2 = os.path.join(folder, 'output_data', f'hap{n2}_coorsys_py.yaml')
-    T1    = load_transform_from_yaml(yaml1)
-    T2    = load_transform_from_yaml(yaml2)
-    print(f"\nT1 (hap{n1}):\n{np.round(T1, 4)}")
-    print(f"\nT2 (hap{n2}):\n{np.round(T2, 4)}")
+    for i, hap_num in enumerate(hap_nums):
+        color, color_name = hap_color(i)
 
-    # ----------------------------------------------------------------
-    # TS座標系へ変換
-    # ----------------------------------------------------------------
-    print("\nTS座標系へ変換中...")
-    xyz1_ts = transform_points(xyz1, T1)
-    xyz2_ts = transform_points(xyz2, T2)
+        csv_path = os.path.join(folder, 'input_data', f'hap{hap_num}.csv')
+        yaml_path = os.path.join(folder, 'output_data', f'hap{hap_num}_coorsys_py.yaml')
 
-    # ----------------------------------------------------------------
-    # Open3D で可視化
-    # ----------------------------------------------------------------
-    print("可視化ウィンドウを開きます（ウィンドウを閉じると終了）")
-    pcd1 = make_pcd(xyz1_ts, [1.0, 0.3, 0.3])  # 赤系（hap1）
-    pcd2 = make_pcd(xyz2_ts, [0.3, 0.6, 1.0])  # 青系（hap2）
+        xyz, _ = load_pointcloud_from_csv(csv_path)
+        T = load_transform_from_yaml(yaml_path)
+        print(f"\nT (hap{hap_num}):\n{np.round(T, 4)}")
 
+        print(f"\nTS座標系へ変換中... (HAP{hap_num})")
+        xyz_ts = transform_points(xyz, T)
+        pcds.append(make_pcd(xyz_ts, color))
+        legend_parts.append(f'HAP{hap_num} ({color_name})')
+
+    print("\n可視化ウィンドウを開きます（ウィンドウを閉じると終了）")
     o3d.visualization.draw_geometries(
-        [pcd1, pcd2],
-        window_name=f'HAP{n1} (赤) + HAP{n2} (青)  ─  TS座標系',
+        pcds,
+        window_name=' + '.join(legend_parts) + '  ─  TS座標系',
         width=1280,
         height=720,
     )

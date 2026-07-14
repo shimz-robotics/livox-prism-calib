@@ -7,7 +7,7 @@ x, y, z, intensity, tag の順で CSV に保存する。
 
 使い方:
   # ドライバ起動後、別ターミナルで実行
-  python3 lidar_to_csv.py --hap-num 101 --duration 10
+  python3 lidar_to_csv.py -n 101 --duration 10
 
   python3 lidar_to_csv.py \\
     --topic /livox/lidar_192_168_0_101 \\
@@ -16,7 +16,7 @@ x, y, z, intensity, tag の順で CSV に保存する。
 
 オプション:
   --topic       購読トピック（--hap-num より優先）
-  --hap-num     出力ファイル名 hap<N>.csv 用（デフォルト: 101）
+  --hap-num, -n 出力ファイル名 hap<N>.csv 用（デフォルト: 101）
   --duration    記録時間 [秒]（デフォルト: 10.0）
   --output      出力 CSV ファイル名（デフォルト: hap<hap-num>.csv）
   --data-dir    出力先ディレクトリ（デフォルト: ./data/input_data）
@@ -55,6 +55,7 @@ def parse_args():
     )
     parser.add_argument(
         "--hap-num",
+        "-n",
         type=int,
         default=101,
         help="HAP number for default topic and output filename hap<N>.csv",

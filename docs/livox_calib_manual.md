@@ -194,13 +194,13 @@ source ./ros2_livox_ws/install/setup.bash
 HAP101 → `data/input_data/hap101.csv`:
 
 ```bash
-python3 lidar_to_csv.py --hap-num 101 --duration 10
+python3 lidar_to_csv.py -n 101 --duration 10
 ```
 
 HAP102 も取得する場合:
 
 ```bash
-python3 lidar_to_csv.py --hap-num 102 --duration 10
+python3 lidar_to_csv.py -n 102 --duration 10
 ```
 
 トピックを直接指定する場合:
@@ -212,14 +212,14 @@ python3 lidar_to_csv.py --topic /livox/lidar_192_168_0_101 --duration 30 --outpu
 #### lidar_to_csv.py オプション一覧
 
 
-| オプション             | デフォルト                              | 説明                                       |
-| ----------------- | ---------------------------------- | ---------------------------------------- |
-| `--hap-num N`     | `101`                              | 出力ファイル名 `hap<N>.csv` とデフォルトトピックの選択       |
-| `--duration SEC`  | `10.0`                             | 記録時間 [秒]                                 |
-| `--topic NAME`    | （hap-num + hap_ip_map.yaml から自動）    | 購読する PointCloud2 トピック（指定時は hap-num より優先） |
-| `--output FILE`   | `hap<N>.csv`                       | 出力 CSV ファイル名                             |
-| `--data-dir PATH` | `./data/input_data`                 | 出力先ディレクトリ                                |
-| `--ip-map PATH`   | `data/input_data/hap_ip_map.yaml`     | HAP番号→IP マップ YAML                        |
+| オプション             | 短縮形    | デフォルト                              | 説明                                       |
+| ----------------- | ------ | ---------------------------------- | ---------------------------------------- |
+| `--hap-num N`     | `-n N` | `101`                              | 出力ファイル名 `hap<N>.csv` とデフォルトトピックの選択       |
+| `--duration SEC`  |        | `10.0`                             | 記録時間 [秒]                                 |
+| `--topic NAME`    |        | （hap-num + hap_ip_map.yaml から自動）    | 購読する PointCloud2 トピック（指定時は hap-num より優先） |
+| `--output FILE`   |        | `hap<N>.csv`                       | 出力 CSV ファイル名                             |
+| `--data-dir PATH` |        | `./data/input_data`                 | 出力先ディレクトリ                                |
+| `--ip-map PATH`   |        | `data/input_data/hap_ip_map.yaml`     | HAP番号→IP マップ YAML                        |
 
 
 #### 注意
@@ -407,7 +407,13 @@ python3 show_multi_hap_point_cloud.py
 HAP番号とデータフォルダを指定:
 
 ```bash
-python3 show_multi_hap_point_cloud.py --hap-num1 101 --hap-num2 102 --data-folder ./data
+python3 show_multi_hap_point_cloud.py -n 101 102 --data-folder ./data
+```
+
+3台以上を重ね表示:
+
+```bash
+python3 show_multi_hap_point_cloud.py -n 101 102 123 124
 ```
 
 ### オプション一覧
@@ -415,8 +421,7 @@ python3 show_multi_hap_point_cloud.py --hap-num1 101 --hap-num2 102 --data-folde
 
 | オプション                | 短縮形       | デフォルト                                             | 説明             |
 | -------------------- | --------- | ------------------------------------------------- | -------------- |
-| `--hap-num1 N`       | `-n1 N`   | `101`                                             | 1台目の HAP 番号（赤） |
-| `--hap-num2 N`       | `-n2 N`   | `102`                                             | 2台目の HAP 番号（青） |
+| `--hap-num N ...`    | `-n N ...` | `101 102`                                         | 対象 HAP 番号（複数可。色は赤→青→緑→…の順） |
 | `--data-folder PATH` | `-d PATH` | `./data`（リポジトリ内） | データフォルダ        |
 
 
@@ -627,70 +632,4 @@ python3 update_hap_config_from_coorsys.py --reset -n 101 102 --dry-run
 
 # 大まかな手順
 
-## キャリブレーション用ターゲットプリズムデータの準備
-
-- 点群中の少なくとも３点にターゲットプリズムを設置する
-- トータルステーションで設置したターゲットプリズムの位置を測定する
-- 測定した値を X,Y,Z の順で prism_pos_xxx.csv に記述する
-
-以下は、このプロジェクトのパスに移動して実行する。
-
-```bash
-cd /path/to/livox-prism-calib
-```
-
-## JSONファイルのリセット
-
-101と102を初期化したい場合
-
-```bash
-python3 update_hap_config_from_coorsys.py --reset -n 101 102
-```
-
-## LiDARドライバ起動
-
-```bash
-source /opt/ros/humble/setup.bash
-source ./ros2_livox_ws/install/setup.bash
-ros2 launch livox_ros_driver2 rviz_HAP_launch.py
-```
-
-## 点群データ取得
-
-```bash
-python3 lidar_to_csv.py --hap-num 101 --duration 10
-```
-
-```bash
-python3 lidar_to_csv.py --hap-num 102 --duration 10
-```
-
-## キャリブレーションの実行
-
-```bash
-python3 detect_prism_and_calc_hap_coorsys.py -n 101
-```
-
-```bash
-python3 detect_prism_and_calc_hap_coorsys.py -n 102
-```
-
-## 点群可視化(確認)
-
-```bash
-python3 show_multi_hap_point_cloud.py --hap-num1 101 --hap-num2 102
-```
-
-## HAP_config.json への反映
-
-```bash
-python3 update_hap_config_from_coorsys.py -n 101 102
-```
-
-## 確認
-
-反映にはドライバの再起動が必要です。起動中のドライバを Ctrl+C で停止してから再度起動します。
-
-```bash
-ros2 launch livox_ros_driver2 rviz_HAP_launch.py
-```
+現場向けの短縮手順は [`calib_quickstart.md`](calib_quickstart.md) を参照してください。

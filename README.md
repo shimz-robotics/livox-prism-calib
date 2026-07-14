@@ -15,6 +15,7 @@ Livox HAP をプリズム（TS）計測値でキャリブレーションする P
 | `data/input_data/` | 入力（パラメータ・プリズム位置・点群 CSV） |
 | `data/output_data/` | キャリブ結果 YAML |
 | `docs/livox_calib_manual.md` | 手順マニュアル |
+| `docs/calib_quickstart.md` | 現場向けクイック手順 |
 
 ## セットアップ
 
@@ -25,7 +26,8 @@ pip install -r requirements.txt
 点群記録・設定反映には ROS 2 と livox_ros_driver2 のワークスペースが必要です。  
 未構築の場合は `./scripts/setup_ros2_ws.sh` で構築できます（sudo 不要、デフォルトはリポジトリ内 `./ros2_livox_ws/`・Git 管理外。`~/ros2_livox_ws` など任意の場所も引数で指定可）。
 
-詳細は [docs/livox_calib_manual.md](docs/livox_calib_manual.md) を参照してください。
+詳細は [docs/livox_calib_manual.md](docs/livox_calib_manual.md) を参照してください。  
+現場向けの短縮手順は [docs/calib_quickstart.md](docs/calib_quickstart.md) です。
 
 ## クイックスタート
 
@@ -33,7 +35,7 @@ pip install -r requirements.txt
 cd /path/to/livox-prism-calib
 
 # 1. 点群記録（ROS 2 環境を sourced した状態で）
-python3 lidar_to_csv.py --hap-num 123
+python3 lidar_to_csv.py -n 123
 
 # 2. キャリブ
 python3 detect_prism_and_calc_hap_coorsys.py -n 123 -d ./data

@@ -11,13 +11,13 @@
       "log_data_port": 59000
     },
     "host_net_info": {
-      "cmd_data_ip": "192.168.0.30",
+      "cmd_data_ip": "192.168.0.201",
       "cmd_data_port": 56000,
       "push_msg_ip": "",
       "push_msg_port": 0,
-      "point_data_ip": "192.168.0.30",
+      "point_data_ip": "192.168.0.201",
       "point_data_port": 57000,
-      "imu_data_ip": "192.168.0.30",
+      "imu_data_ip": "192.168.0.201",
       "imu_data_port": 58000,
       "log_data_ip": "",
       "log_data_port": 59000
@@ -29,12 +29,12 @@
       "pcl_data_type": 1,
       "pattern_mode": 0,
       "extrinsic_parameter": {
-        "roll": 0.0,
-        "pitch": 0.0,
-        "yaw": 0.0,
-        "x": 0,
-        "y": 0,
-        "z": 0
+        "roll": -0.6558800628226276,
+        "pitch": 10.792779548862953,
+        "yaw": -3.6476477587342813,
+        "x": -7728,
+        "y": 653,
+        "z": 433
       }
     },
     {
@@ -42,12 +42,12 @@
       "pcl_data_type": 1,
       "pattern_mode": 0,
       "extrinsic_parameter": {
-        "roll": 0.0,
-        "pitch": 0.0,
-        "yaw": 0.0,
-        "x": 0,
-        "y": 0,
-        "z": 0
+        "roll": -0.15135462534779492,
+        "pitch": 12.208637900775052,
+        "yaw": -20.098100030706675,
+        "x": -8979,
+        "y": 1933,
+        "z": 319
       }
     },
     {
