@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-showMultiHapPointCloud.py
+show_multi_hap_point_cloud.py
 
 2台のHAP点群をTS座標系に変換して3D可視化する。
 
 使い方:
-  python3 showMultiHapPointCloud.py [--hap-num1 N1] [--hap-num2 N2] [--data-folder PATH]
+  python3 show_multi_hap_point_cloud.py [--hap-num1 N1] [--hap-num2 N2] [--data-folder PATH]
 
 オプション:
   --hap-num1    N1    1台目の HAP 番号（デフォルト: 101）
@@ -13,8 +13,8 @@ showMultiHapPointCloud.py
   --data-folder PATH  データフォルダのパス
 
 入力（data-folder 以下）:
-  inputData/hap<N>.csv                   : HAP 点群
-  outputData/hap<N>Coorsys_py.yaml       : キャリブ結果
+  input_data/hap<N>.csv                   : HAP 点群
+  output_data/hap<N>_coorsys_py.yaml       : キャリブ結果
 
 Original: showMultiHapPointCloud.m
 """
@@ -123,15 +123,15 @@ def main():
     # 点群読み込み
     # ----------------------------------------------------------------
     xyz1, _ = load_pointcloud_from_csv(
-        os.path.join(folder, 'inputData', f'hap{n1}.csv'))
+        os.path.join(folder, 'input_data', f'hap{n1}.csv'))
     xyz2, _ = load_pointcloud_from_csv(
-        os.path.join(folder, 'inputData', f'hap{n2}.csv'))
+        os.path.join(folder, 'input_data', f'hap{n2}.csv'))
 
     # ----------------------------------------------------------------
     # 変換行列読み込み（YAML → 4×4 同次変換行列）
     # ----------------------------------------------------------------
-    yaml1 = os.path.join(folder, 'outputData', f'hap{n1}Coorsys_py.yaml')
-    yaml2 = os.path.join(folder, 'outputData', f'hap{n2}Coorsys_py.yaml')
+    yaml1 = os.path.join(folder, 'output_data', f'hap{n1}_coorsys_py.yaml')
+    yaml2 = os.path.join(folder, 'output_data', f'hap{n2}_coorsys_py.yaml')
     T1    = load_transform_from_yaml(yaml1)
     T2    = load_transform_from_yaml(yaml2)
     print(f"\nT1 (hap{n1}):\n{np.round(T1, 4)}")

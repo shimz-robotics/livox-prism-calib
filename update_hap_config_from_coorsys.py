@@ -2,16 +2,16 @@
 """
 update_hap_config_from_coorsys.py
 
-hap<N>Coorsys_py.yaml の位置・姿勢を HAP_config.json の extrinsic_parameter に反映する。
+hap<N>_coorsys_py.yaml の位置・姿勢を HAP_config.json の extrinsic_parameter に反映する。
 
 使い方:
   python3 update_hap_config_from_coorsys.py [--hap-num N ...] [--data-folder PATH]
 
 オプション:
   --hap-num N ...     対象 HAP 番号（複数指定可、デフォルト: 101 102）
-  --data-folder PATH  キャリブ YAML の親フォルダ（outputData を含む）
+  --data-folder PATH  キャリブ YAML の親フォルダ（output_data を含む）
   --hap-config PATH   更新先 HAP_config.json
-  --ip-map PATH       HAP番号→IP マップ YAML（デフォルト: data/inputData/hapIpMap.yaml）
+  --ip-map PATH       HAP番号→IP マップ YAML（デフォルト: data/input_data/hap_ip_map.yaml）
   --yes               確認プロンプトをスキップして更新
   --no-backup         更新前の .bak を作成しない
   --dry-run           プレビューのみ（ファイルは更新しない）
@@ -48,8 +48,8 @@ ZERO_EXTRINSIC = {
 
 
 def coorsys_yaml_path(data_folder: Union[str, Path], hap_num: int) -> Path:
-    """data-folder/outputData/hap<N>Coorsys_py.yaml のパスを返す。"""
-    return Path(data_folder).expanduser() / "outputData" / f"hap{hap_num}Coorsys_py.yaml"
+    """data-folder/output_data/hap<N>_coorsys_py.yaml のパスを返す。"""
+    return Path(data_folder).expanduser() / "output_data" / f"hap{hap_num}_coorsys_py.yaml"
 
 
 def build_hap_num_to_yaml(
@@ -63,7 +63,7 @@ def build_hap_num_to_yaml(
         if not path.is_file():
             raise FileNotFoundError(
                 f"キャリブ結果が見つかりません: {path}\n"
-                f"先に detectPrismAndCalcHapCoorsys.py -n {hap_num} を実行してください。"
+                f"先に detect_prism_and_calc_hap_coorsys.py -n {hap_num} を実行してください。"
             )
         result[hap_num] = path
     return result
@@ -71,7 +71,7 @@ def build_hap_num_to_yaml(
 
 def coorsys_yaml_to_extrinsic(yaml_path: Union[str, Path]) -> dict:
     """
-    hap<N>Coorsys_py.yaml を Livox extrinsic_parameter 形式に変換する。
+    hap<N>_coorsys_py.yaml を Livox extrinsic_parameter 形式に変換する。
 
     Returns
     -------
@@ -102,7 +102,7 @@ def hap_nums_to_extrinsic_by_ip(
         if hap_num not in hap_num_to_ip:
             raise KeyError(
                 f"HAP番号 {hap_num} の IP マッピングがありません。"
-                " hapIpMap.yaml の hap_num_to_ip に追加してください。"
+                " hap_ip_map.yaml の hap_num_to_ip に追加してください。"
             )
         extrinsic_by_ip[hap_num_to_ip[hap_num]] = dict(extrinsic)
     return extrinsic_by_ip
@@ -167,7 +167,7 @@ def update_hap_config_extrinsics(
         if hap_num not in hap_num_to_ip:
             raise KeyError(
                 f"HAP番号 {hap_num} の IP マッピングがありません。"
-                " hapIpMap.yaml の hap_num_to_ip に追加してください。"
+                " hap_ip_map.yaml の hap_num_to_ip に追加してください。"
             )
         extrinsic_by_ip[hap_num_to_ip[hap_num]] = coorsys_yaml_to_extrinsic(yaml_path)
 

@@ -13,7 +13,7 @@ from typing import Dict, Optional, Union
 import yaml
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-DEFAULT_IP_MAP_PATH = SCRIPT_DIR / "data" / "inputData" / "hapIpMap.yaml"
+DEFAULT_IP_MAP_PATH = SCRIPT_DIR / "data" / "input_data" / "hap_ip_map.yaml"
 
 
 def ip_to_topic(ip: str) -> str:
@@ -25,7 +25,7 @@ def load_hap_num_to_ip(
     path: Optional[Union[str, Path]] = None,
 ) -> Dict[int, str]:
     """
-    hapIpMap.yaml を読み込み、{HAP番号: IP} 辞書を返す。
+    hap_ip_map.yaml を読み込み、{HAP番号: IP} 辞書を返す。
 
     Parameters
     ----------
@@ -85,7 +85,7 @@ def resolve_ip(
     if hap_num not in hap_num_to_ip:
         raise KeyError(
             f"HAP番号 {hap_num} の IP マッピングがありません。"
-            " hapIpMap.yaml の hap_num_to_ip に追加してください。"
+            " hap_ip_map.yaml の hap_num_to_ip に追加してください。"
         )
     return hap_num_to_ip[hap_num]
 

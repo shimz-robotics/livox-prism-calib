@@ -19,12 +19,12 @@ x, y, z, intensity, tag の順で CSV に保存する。
   --hap-num     出力ファイル名 hap<N>.csv 用（デフォルト: 101）
   --duration    記録時間 [秒]（デフォルト: 10.0）
   --output      出力 CSV ファイル名（デフォルト: hap<hap-num>.csv）
-  --data-dir    出力先ディレクトリ（デフォルト: ./data/inputData）
-  --ip-map      HAP番号→IP マップ YAML（デフォルト: data/inputData/hapIpMap.yaml）
+  --data-dir    出力先ディレクトリ（デフォルト: ./data/input_data）
+  --ip-map      HAP番号→IP マップ YAML（デフォルト: data/input_data/hap_ip_map.yaml）
 
 前提:
   - livox_ros_driver2 が xfer_format=0 (PointCloud2) で起動していること
-  - multi_topic=1 のときトピックは hapIpMap.yaml の IP から自動生成:
+  - multi_topic=1 のときトピックは hap_ip_map.yaml の IP から自動生成:
       192.168.0.101 -> /livox/lidar_192_168_0_101
 """
 
@@ -41,7 +41,7 @@ from sensor_msgs_py import point_cloud2
 from hap_ip_map import DEFAULT_IP_MAP_PATH, load_hap_num_to_ip, resolve_topic
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-DEFAULT_DATA_DIR = SCRIPT_DIR / "data" / "inputData"
+DEFAULT_DATA_DIR = SCRIPT_DIR / "data" / "input_data"
 
 
 def parse_args():

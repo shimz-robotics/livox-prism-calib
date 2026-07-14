@@ -7,12 +7,12 @@ Livox HAP をプリズム（TS）計測値でキャリブレーションする P
 | ファイル | 役割 |
 |---------|------|
 | `lidar_to_csv.py` | ROS 2 点群 → CSV 記録 |
-| `detectPrismAndCalcHapCoorsys.py` | プリズム検出・LiDARの位置姿勢算出 |
-| `showMultiHapPointCloud.py` | 複数 HAP の TS 座標系可視化 |
+| `detect_prism_and_calc_hap_coorsys.py` | プリズム検出・LiDARの位置姿勢算出 |
+| `show_multi_hap_point_cloud.py` | 複数 HAP の TS 座標系可視化 |
 | `update_hap_config_from_coorsys.py` | 結果を `HAP_config.json` に反映 |
 | `hap_ip_map.py` / `hap_csv_io.py` | 共通ユーティリティ |
-| `data/inputData/` | 入力（パラメータ・プリズム位置・点群 CSV） |
-| `data/outputData/` | キャリブ結果 YAML |
+| `data/input_data/` | 入力（パラメータ・プリズム位置・点群 CSV） |
+| `data/output_data/` | キャリブ結果 YAML |
 | `docs/livox_calib_manual.md` | 手順マニュアル |
 
 ## セットアップ
@@ -34,7 +34,7 @@ cd /path/to/livox-prism-calib
 python3 lidar_to_csv.py --hap-num 123
 
 # 2. キャリブ
-python3 detectPrismAndCalcHapCoorsys.py -n 123 -d ./data
+python3 detect_prism_and_calc_hap_coorsys.py -n 123 -d ./data
 
 # 3. HAP_config.json へ反映
 python3 update_hap_config_from_coorsys.py -n 123
@@ -45,4 +45,4 @@ python3 update_hap_config_from_coorsys.py -n 123
 
 ## 注意
 
-`data/inputData/hap*.csv`（点群）はサイズが大きいため Git 管理対象外です。現場データはローカルに置いてください。
+`data/input_data/hap*.csv`（点群）はサイズが大きいため Git 管理対象外です。現場データはローカルに置いてください。

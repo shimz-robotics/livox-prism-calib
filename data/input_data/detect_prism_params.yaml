@@ -1,4 +1,4 @@
-# detectPrismAndCalcHapCoorsys.py 検出パラメータ
+# detect_prism_and_calc_hap_coorsys.py 検出パラメータ
 # 単位はすべて [m]（arm_max のみ無次元）
 
 # TSプリズム3点の二等辺三角形判定（最小辺長差がこれ未満ならエラー）

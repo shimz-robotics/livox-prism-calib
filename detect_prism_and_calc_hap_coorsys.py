@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """
-detectPrismAndCalcHapCoorsys.py
+detect_prism_and_calc_hap_coorsys.py
 
 LiDAR（HAP）点群からプリズムを検出し、TS計測値との対応づけにより
 LiDAR座標系の位置・姿勢を求める。
 
 使い方:
-  python3 detectPrismAndCalcHapCoorsys.py [--hap-num N] [--data-folder PATH] [--config PATH]
+  python3 detect_prism_and_calc_hap_coorsys.py [--hap-num N] [--data-folder PATH] [--config PATH]
 
 オプション:
   --hap-num     N     処理する HAP 番号（デフォルト: 101）
   --data-folder PATH  データフォルダのパス（デフォルト: ./data）
-  --config      PATH  検出パラメータ YAML（デフォルト: data/inputData/detectPrismParams.yaml）
+  --config      PATH  検出パラメータ YAML（デフォルト: data/input_data/detect_prism_params.yaml）
 
 入力（data-folder 以下）:
-  inputData/PrismPos<N>.csv       : TS で取得した3つのプリズム位置 [m]（HAP番号 N に対応）
-  inputData/hap<N>.csv            : HAP 点群（lidar_to_csv.py 出力: x,y,z,intensity,tag）
+  input_data/prism_pos_<N>.csv       : TS で取得した3つのプリズム位置 [m]（HAP番号 N に対応）
+  input_data/hap<N>.csv            : HAP 点群（lidar_to_csv.py 出力: x,y,z,intensity,tag）
                                  旧形式（index 付き 8列）も読み込み可
-  inputData/detectPrismParams.yaml: 検出パラメータ（diff_distance, cluster_radius, tolerance, arm_max）
+  input_data/detect_prism_params.yaml: 検出パラメータ（diff_distance, cluster_radius, tolerance, arm_max）
 
 出力（data-folder 以下）:
-  outputData/hapXXXCoorsys_py.yaml       : LiDAR 位置・姿勢
+  output_data/hapXXX_coorsys_py.yaml       : LiDAR 位置・姿勢
 
 Original: detectPrismAndCalcHapCoorsys.m
 """
@@ -44,7 +44,7 @@ from hap_csv_io import load_hap_csv
 SCRIPT_DIR          = Path(__file__).resolve().parent
 DEFAULT_HAP_NUM     = 101
 DEFAULT_DATA_FOLDER = './data'
-DEFAULT_CONFIG      = SCRIPT_DIR / 'data' / 'inputData' / 'detectPrismParams.yaml'
+DEFAULT_CONFIG      = SCRIPT_DIR / 'data' / 'input_data' / 'detect_prism_params.yaml'
 
 DEFAULT_PARAMS = {
     'diff_distance': 0.05,
@@ -321,7 +321,7 @@ def main():
     # ----------------------------------------------------------------
     # TSで測量したプリズム位置を読み込む
     # ----------------------------------------------------------------
-    prism_file = os.path.join(data_folder, 'inputData', f'PrismPos{hap_num}.csv')
+    prism_file = os.path.join(data_folder, 'input_data', f'prism_pos_{hap_num}.csv')
     if not os.path.isfile(prism_file):
         print(f'ERROR: TSプリズム位置ファイルが見つかりません: {prism_file}')
         return
@@ -335,7 +335,7 @@ def main():
     # ----------------------------------------------------------------
     # HAP点群データを読み込む
     # ----------------------------------------------------------------
-    hap_file = os.path.join(data_folder, 'inputData', f'hap{hap_num}.csv')
+    hap_file = os.path.join(data_folder, 'input_data', f'hap{hap_num}.csv')
     print(f"\n点群ファイル読み込み中: {hap_file}")
     xyz, intensity, tag = load_hap_csv(hap_file)
     print(f"点群総数: {len(xyz)}")
@@ -429,8 +429,8 @@ def main():
     # ----------------------------------------------------------------
     # YAML出力
     # ----------------------------------------------------------------
-    os.makedirs(os.path.join(data_folder, 'outputData'), exist_ok=True)
-    yaml_out = os.path.join(data_folder, 'outputData', f'hap{hap_num}Coorsys_py.yaml')
+    os.makedirs(os.path.join(data_folder, 'output_data'), exist_ok=True)
+    yaml_out = os.path.join(data_folder, 'output_data', f'hap{hap_num}_coorsys_py.yaml')
     data_out = {
         'Position': {
             'x': int(round(t[0] * 1000)),
@@ -450,7 +450,7 @@ def main():
     # ----------------------------------------------------------------
     # 期待値との比較
     # ----------------------------------------------------------------
-    ref_yaml = os.path.join(data_folder, 'outputData', f'hap{hap_num}Coorsys.yaml')
+    ref_yaml = os.path.join(data_folder, 'output_data', f'hap{hap_num}_coorsys.yaml')
     if os.path.exists(ref_yaml):
         with open(ref_yaml) as f:
             ref = yaml.safe_load(f)
