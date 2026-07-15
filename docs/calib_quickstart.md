@@ -53,12 +53,6 @@ python3 detect_prism_and_calc_hap_coorsys.py -n 101
 python3 detect_prism_and_calc_hap_coorsys.py -n 102
 ```
 
-## 点群可視化（確認）
-
-```bash
-python3 show_multi_hap_point_cloud.py -n 101 102
-```
-
 ## HAP_config.json への反映
 
 ```bash
