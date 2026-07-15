@@ -392,14 +392,27 @@ def main():
             params['tolerance'], arm_max=params['arm_max']
         )
 
-        if flag == 1:
+        if flag == 1 and len(ts_m) == 3 and len(hap_m) == 3:
             ts_points_matched  = ts_m
             hap_points_matched = hap_m
             flag1              = False
             print(f"対応づけ成功（threshold={intensity_threshold}）")
+        elif flag == 1:
+            print(
+                f"対応点数が不足（TS={len(ts_m)}, LiDAR={len(hap_m)}）。"
+                "閾値を下げて再試行します。"
+            )
 
     if ts_points_matched is None:
-        print('対応づけに失敗しました。')
+        print('対応づけに失敗しました。3つのターゲットマーカがスキャンされていますか？')
+        return
+
+    n_matched = len(ts_points_matched)
+    if n_matched != 3 or len(hap_points_matched) != 3:
+        print(
+            f'エラー: 3つのターゲットマーカがスキャンされていますか？'
+            f'（対応点数: TS={n_matched}, LiDAR={len(hap_points_matched)}）'
+        )
         return
 
     # ----------------------------------------------------------------
@@ -421,7 +434,7 @@ def main():
     # ----------------------------------------------------------------
     # 結果確認（変換誤差チェック）
     # ----------------------------------------------------------------
-    hap_ex  = np.hstack([hap_points_matched, np.ones((3, 1))])
+    hap_ex  = np.hstack([hap_points_matched, np.ones((n_matched, 1))])
     ts_calc = (ts_H_hap @ hap_ex.T).T[:, :3]
     err     = np.linalg.norm(ts_calc - ts_points_matched, axis=1)
     print(f"変換誤差（各プリズム）: {np.round(err * 1000, 2)} [mm]")
