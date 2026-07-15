@@ -53,6 +53,13 @@ if [ ! -d "$WS_DIR/src/livox_ros_driver2" ]; then
     git clone "$DRIVER_REPO" "$WS_DIR/src/livox_ros_driver2"
 fi
 
+# launch ファイルを multi_topic=1（LiDAR ごとにトピックを分ける）に書き換える。
+# 公式デフォルトは 0（全 LiDAR が /livox/lidar を共有）だが、lidar_to_csv.py と
+# マニュアルは /livox/lidar_<IP> 形式のトピックを前提としている（issue #13）。
+# 再実行しても安全（既に 1 なら無変更）。
+sed -i -E 's/^(multi_topic[[:space:]]*=[[:space:]]*)0/\11/' \
+    "$WS_DIR/src/livox_ros_driver2/launch_ROS2/"*launch.py
+
 # 再ビルドスクリプトを生成（初回ビルドもこれを使う）
 cat > "$WS_DIR/rebuild.sh" << 'EOS'
 #!/bin/bash

@@ -216,6 +216,7 @@ python3 lidar_to_csv.py --topic /livox/lidar_192_168_0_101 --duration 30 --outpu
 | ----------------- | ------ | ---------------------------------- | ---------------------------------------- |
 | `--hap-num N`     | `-n N` | `101`                              | 出力ファイル名 `hap<N>.csv` とデフォルトトピックの選択       |
 | `--duration SEC`  |        | `10.0`                             | 記録時間 [秒]                                 |
+| `--wait-timeout SEC` |     | `10.0`                             | 最初のメッセージ待ちのタイムアウト [秒]（0 以下で無効）        |
 | `--topic NAME`    |        | （hap-num + hap_ip_map.yaml から自動）    | 購読する PointCloud2 トピック（指定時は hap-num より優先） |
 | `--output FILE`   |        | `hap<N>.csv`                       | 出力 CSV ファイル名                             |
 | `--data-dir PATH` |        | `./data/input_data`                 | 出力先ディレクトリ                                |
@@ -232,6 +233,19 @@ sudo apt install ros-humble-sensor-msgs-py
 ```
 
 - 取得した CSV は `detect_prism_and_calc_hap_coorsys.py` の入力（`input_data/hap<NUM>.csv`）としてそのまま使えます。
+
+#### トラブルシューティング: 記録が始まらない・タイムアウトする
+
+「No message received on ...」で終了する場合、購読トピックに点群が流れていません。以下を確認してください。
+
+1. ドライバーが起動しているか（ターミナル1の `ros2 launch` が動いているか）
+2. トピックが存在するか:
+
+```bash
+ros2 topic list
+```
+
+3. `/livox/lidar` しかない場合、ドライバーが `multi_topic=0` で起動しています。`ros2_livox_ws/src/livox_ros_driver2/launch_ROS2/rviz_HAP_launch.py` の `multi_topic = 0` を `1` に変更し、`ros2_livox_ws/rebuild.sh` で再ビルドしてからドライバーを再起動してください（`scripts/setup_ros2_ws.sh` で構築したワークスペースは自動で `multi_topic=1` になります）。
 
 ---
 

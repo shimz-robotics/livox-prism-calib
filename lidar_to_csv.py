@@ -18,6 +18,7 @@ x, y, z, intensity, tag の順で CSV に保存する。
   --topic       購読トピック（--hap-num より優先）
   --hap-num, -n 出力ファイル名 hap<N>.csv 用（デフォルト: 101）
   --duration    記録時間 [秒]（デフォルト: 10.0）
+  --wait-timeout 最初のメッセージ待ちのタイムアウト [秒]（デフォルト: 10.0、0 以下で無効）
   --output      出力 CSV ファイル名（デフォルト: hap<hap-num>.csv）
   --data-dir    出力先ディレクトリ（デフォルト: ./data/input_data）
   --ip-map      HAP番号→IP マップ YAML（デフォルト: data/input_data/hap_ip_map.yaml）
@@ -65,6 +66,12 @@ def parse_args():
         type=float,
         default=10.0,
         help="Recording duration in seconds",
+    )
+    parser.add_argument(
+        "--wait-timeout",
+        type=float,
+        default=10.0,
+        help="Timeout in seconds waiting for the first message (<=0 disables)",
     )
     parser.add_argument(
         "--output",
@@ -172,9 +179,28 @@ def main():
 
     rclpy.init()
     node = LidarCsvRecorder(topic, args.duration, output_path)
+    timed_out = False
     try:
+        wait_start = time.monotonic()
         while rclpy.ok() and not node.done:
             rclpy.spin_once(node, timeout_sec=0.1)
+            now = time.monotonic()
+            if node.t0 is None:
+                # 最初のメッセージがまだ来ていない
+                if args.wait_timeout > 0 and now - wait_start >= args.wait_timeout:
+                    node.get_logger().error(
+                        f"No message received on '{topic}' "
+                        f"in {args.wait_timeout:.1f}s. "
+                        "Check: (1) the driver is running, "
+                        "(2) the topic exists (`ros2 topic list`), "
+                        "(3) the driver is launched with multi_topic=1 "
+                        "(otherwise the topic is /livox/lidar)."
+                    )
+                    timed_out = True
+                    break
+            elif now - node.t0 >= node.duration_sec:
+                # 記録途中でメッセージが途絶えても duration 経過で終了する
+                node._finish()
     except KeyboardInterrupt:
         node.get_logger().info("Interrupted by user.")
         if not node.done:
@@ -184,7 +210,7 @@ def main():
         if rclpy.ok():
             rclpy.shutdown()
 
-    return 0
+    return 1 if timed_out else 0
 
 
 if __name__ == "__main__":
