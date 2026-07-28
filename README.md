@@ -51,3 +51,7 @@ python3 update_hap_config_from_coorsys.py -n 123
 ## 注意
 
 `data/input_data/hap*.csv`（点群）はサイズが大きいため Git 管理対象外です。現場データはローカルに置いてください。
+
+## ライセンス
+
+[MIT License](LICENSE)
