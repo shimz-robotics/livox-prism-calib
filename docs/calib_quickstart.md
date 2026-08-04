@@ -3,11 +3,12 @@
 現場向けの短縮手順です。詳細は [`livox_calib_manual.md`](livox_calib_manual.md) を参照してください。
 
 ## キャリブレーション用ターゲットプリズムデータの準備
+0. /data/HAP_config.json にてPCのIP,LiDARのIPを記述
+1. LiDARのIPとコマンドパラメータで取り扱う番号の対応を`data/input_data/hap_ip_map.yaml`に記述する
+2. 点群中の少なくとも３点にターゲットプリズムを設置する
+3. トータルステーションで設置したターゲットプリズムの位置を測定する
+4. 測定した値を X,Y,Z の順で `data/input_data/prism_pos_<num>.csv` に記述する
 
-1. 点群中の少なくとも３点にターゲットプリズムを設置する
-2. トータルステーションで設置したターゲットプリズムの位置を測定する
-3. 測定した値を X,Y,Z の順で `data/input_data/prism_pos_<num>.csv` に記述する
-4. LiDARのIPと番号の対応を`data/input_data/hap_ip_map.yaml`に記述する
 
 以下は、このプロジェクトのパスに移動して実行する。
 
