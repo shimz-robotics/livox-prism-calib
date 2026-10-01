@@ -8,7 +8,7 @@ diff_distance: 0.05
 cluster_radius: 0.075
 
 # 形状マッチング（constellation matching）の長さ一致許容誤差
-tolerance: 0.075
+tolerance: 0.1
 
 # アーム長インデックス行列の最大次元
 arm_max: 1024
